@@ -19,9 +19,9 @@ export default function LoginPage() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlError = params.get('error');
-      if (urlError) {
-        if (urlError === 'Configuration') {
-          setError('Server configuration resolved. Please sign in with your credentials below.');
+      if (urlError && urlError !== 'Configuration') {
+        if (urlError === 'CredentialsSignin') {
+          setError('Incorrect email or password. Please verify your credentials.');
         } else {
           setError(urlError);
         }
@@ -39,13 +39,20 @@ export default function LoginPage() {
         email,
         password,
         redirect: false,
+        callbackUrl: '/',
       });
 
       if (res?.error) {
-        setError(res.error);
+        if (res.error === 'CredentialsSignin') {
+          setError('Incorrect email or password. Please verify your credentials.');
+        } else if (res.error === 'Configuration') {
+          setError('Authentication server connecting. Please click Sign In again.');
+        } else {
+          setError(res.error);
+        }
         setLoading(false);
       } else {
-        router.push('/');
+        router.push(res?.url || '/');
         router.refresh();
       }
     } catch (err) {

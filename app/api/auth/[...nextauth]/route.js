@@ -4,9 +4,28 @@ import bcrypt from 'bcryptjs';
 import { UserModel } from '@/models/User';
 import { ensureSeedData } from '@/lib/seed';
 
+// Ensure NEXTAUTH_URL and NEXTAUTH_SECRET are always set in any environment (Vercel, local, container)
+if (!process.env.NEXTAUTH_URL) {
+  if (process.env.VERCEL_URL) {
+    process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+  } else if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    process.env.NEXTAUTH_URL = `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+  } else {
+    process.env.NEXTAUTH_URL = 'https://ott-content-analyser.vercel.app';
+  }
+}
+
+if (!process.env.NEXTAUTH_SECRET) {
+  process.env.NEXTAUTH_SECRET =
+    '29054bdaa9cab6e0f9bba82d85b306fdf99fa2b20672adef2c117c853761ef69';
+}
+
+process.env.AUTH_TRUST_HOST = 'true';
+
 export const authOptions = {
   providers: [
     CredentialsProvider({
+      id: 'credentials',
       name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email', placeholder: 'compliance@cinema.io' },
@@ -65,6 +84,13 @@ export const authOptions = {
         session.user.organization = token.organization;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      try {
+        if (new URL(url).origin === baseUrl) return url;
+      } catch (e) {}
+      return baseUrl;
     },
   },
   pages: {
