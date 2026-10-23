@@ -20,7 +20,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
-import TiltedCard from '@/components/TiltedCard';
+import ReflectiveCard from '@/components/ReflectiveCard';
 import styles from './dashboard.module.css';
 
 export default function DashboardPage() {
@@ -96,17 +96,22 @@ export default function DashboardPage() {
       <div className={styles.dashboardBgBackdrop} aria-hidden="true" />
 
       <div className={styles.dashboardContainer}>
-        {/* Landing Hero with React Bits <TiltedCard /> 3D Perspective Interaction */}
-        <TiltedCard
-          containerWidth="100%"
-          containerHeight="auto"
-          scaleOnHover={1.018}
-          rotateAmplitude={8}
+        {/* Landing Hero with React Bits <ReflectiveCard /> Specular WebGL Interaction */}
+        <ReflectiveCard
+          width="100%"
+          height="auto"
           radius={24}
-          glare={0.4}
-          glareColor="#E51C23"
-          shadow={0.5}
-          className={styles.heroTiltedCardWrapper}
+          tint="#E51C23"
+          metalness={0.7}
+          roughness={0.35}
+          shine={1.5}
+          glare={0.75}
+          warp={0.3}
+          warpScale={1.2}
+          bevel={4}
+          tiltStrength={8}
+          enableTilt={true}
+          className={styles.heroReflectiveCardWrapper}
         >
           <section className={styles.heroSection}>
             <div className={styles.heroLeft}>
@@ -163,7 +168,7 @@ export default function DashboardPage() {
               </div>
             </div>
           </section>
-        </TiltedCard>
+        </ReflectiveCard>
 
       {/* Telemetry Precision Cards */}
       <section className={styles.telemetryGrid}>
