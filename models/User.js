@@ -42,16 +42,18 @@ export const UserModel = {
       }
     }
 
-    // 2. Query Cloudinary shared cloud users store (shared across ALL Vercel instances)
+    // 2. Query Cloudinary shared cloud users store (shared across ALL Vercel instances worldwide)
     try {
       const cloudUsers = await getCloudUsers();
-      const cloudMatch = cloudUsers.find((u) => {
-        const uEmail = (u.email || '').toLowerCase().trim();
-        const uUname = (u.username || '').toLowerCase().trim();
-        const uName = (u.name || '').toLowerCase().trim();
-        return uEmail === clean || uUname === clean || uName === clean;
-      });
-      if (cloudMatch) return cloudMatch;
+      if (Array.isArray(cloudUsers)) {
+        const cloudMatch = cloudUsers.find((u) => {
+          const uEmail = (u.email || '').toLowerCase().trim();
+          const uUname = (u.username || '').toLowerCase().trim();
+          const uName = (u.name || '').toLowerCase().trim();
+          return uEmail === clean || uUname === clean || uName === clean;
+        });
+        if (cloudMatch) return cloudMatch;
+      }
     } catch (e) {
       console.warn('Cloud storage user lookup warning:', e.message);
     }
@@ -101,7 +103,7 @@ export const UserModel = {
     if (!isDbFallback()) {
       try {
         const created = await MongooseUser.create({
-          name,
+          name: name.trim(),
           username: cleanUsername,
           email: cleanEmail,
           password,
@@ -128,7 +130,7 @@ export const UserModel = {
 
     const newUser = {
       _id: crypto.randomBytes(12).toString('hex'),
-      name,
+      name: name.trim(),
       username: cleanUsername,
       email: cleanEmail,
       password,

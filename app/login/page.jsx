@@ -4,7 +4,16 @@ import { useState, useEffect, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShieldCheck, Lock, User, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import {
+  ShieldCheck,
+  Lock,
+  User,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle,
+  AlertTriangle,
+  Sparkles,
+} from 'lucide-react';
 import styles from './login.module.css';
 
 function LoginForm() {
@@ -13,6 +22,13 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
+
+  // Warning alert modal for uppercase in email
+  const [capsModal, setCapsModal] = useState({
+    isOpen: false,
+    typedEmail: '',
+    lowerEmail: '',
+  });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -39,6 +55,27 @@ function LoginForm() {
     }
   }, []);
 
+  const handleIdentifierChange = (val) => {
+    setUsername(val);
+    const hasUpperCase = /[A-Z]/.test(val);
+    if (hasUpperCase && val.includes('@') && !capsModal.isOpen) {
+      setCapsModal({
+        isOpen: true,
+        typedEmail: val,
+        lowerEmail: val.toLowerCase().trim(),
+      });
+    }
+  };
+
+  const handleApplyLowerCaseEmail = () => {
+    setUsername(capsModal.lowerEmail);
+    setCapsModal({ isOpen: false, typedEmail: '', lowerEmail: '' });
+  };
+
+  const handleDismissCapsModal = () => {
+    setCapsModal({ isOpen: false, typedEmail: '', lowerEmail: '' });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -46,10 +83,15 @@ function LoginForm() {
     setInfoMsg('');
 
     try {
+      // Normalize identifier (handles case insensitivity for emails and usernames)
       const trimmedIdentifier = username.trim();
+      const normalizedIdentifier = trimmedIdentifier.includes('@')
+        ? trimmedIdentifier.toLowerCase()
+        : trimmedIdentifier;
+
       const res = await signIn('credentials', {
-        username: trimmedIdentifier,
-        email: trimmedIdentifier,
+        username: normalizedIdentifier,
+        email: normalizedIdentifier,
         password,
         redirect: false,
         callbackUrl: '/',
@@ -85,6 +127,45 @@ function LoginForm() {
 
   return (
     <div className={styles.authContainer}>
+      {/* Uppercase Email Warning Alert Popup Modal */}
+      {capsModal.isOpen && (
+        <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+          <div className={styles.modalBackdrop} onClick={handleDismissCapsModal} />
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <div className={styles.warningIconBox}>
+                <AlertTriangle size={22} />
+              </div>
+              <h3 className={styles.modalTitle}>Uppercase Email Warning</h3>
+            </div>
+            <p className={styles.modalBody}>
+              Email addresses are registered in lowercase. Capital letters can prevent an exact match on some mobile keyboards.
+              <span className={styles.modalEmailPreview}>
+                <span className={styles.emailCapsTyped}>{capsModal.typedEmail}</span>
+                <span className={styles.emailLowerConverted}>&rarr; {capsModal.lowerEmail}</span>
+              </span>
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                onClick={handleDismissCapsModal}
+                className={styles.modalDismissBtn}
+              >
+                Keep As Is
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyLowerCaseEmail}
+                className={styles.modalPrimaryBtn}
+              >
+                <Sparkles size={14} />
+                <span>Convert to Lowercase</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={styles.authCard}>
         {/* Logo and Header */}
         <div className={styles.logoHeader}>
@@ -125,17 +206,22 @@ function LoginForm() {
         {/* Form */}
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Username or Email</label>
+            <label className={styles.label}>
+              <span>Username or Email</span>
+              {username.includes('@') && /[A-Z]/.test(username) && (
+                <span className={styles.capsIndicator}>CAPS DETECTED</span>
+              )}
+            </label>
             <div className={styles.inputWrapper}>
               <User size={16} className={styles.inputIcon} />
               <input
                 type="text"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e) => handleIdentifierChange(e.target.value)}
                 placeholder="Enter username or email"
                 required
                 autoComplete="username"
-                className={styles.input}
+                className={`${styles.input} ${username.includes('@') && /[A-Z]/.test(username) ? styles.inputWarning : ''}`}
               />
             </div>
           </div>

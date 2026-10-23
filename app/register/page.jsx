@@ -1,10 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShieldCheck, Lock, Mail, User, Building, ArrowRight, AlertCircle, CheckCircle, AtSign } from 'lucide-react';
+import {
+  ShieldCheck,
+  Lock,
+  Mail,
+  User,
+  Building,
+  ArrowRight,
+  AlertCircle,
+  CheckCircle,
+  AtSign,
+  AlertTriangle,
+  Check,
+  X,
+  Sparkles,
+} from 'lucide-react';
 import styles from './register.module.css';
 
 export default function RegisterPage() {
@@ -18,13 +32,87 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // Warning alert modal for uppercase in email
+  const [capsModal, setCapsModal] = useState({
+    isOpen: false,
+    typedEmail: '',
+    lowerEmail: '',
+  });
+
+  // Handle email changes and check for caps
+  const handleEmailChange = (val) => {
+    setEmail(val);
+    const hasUpperCase = /[A-Z]/.test(val);
+    if (hasUpperCase && val.includes('@') && !capsModal.isOpen) {
+      setCapsModal({
+        isOpen: true,
+        typedEmail: val,
+        lowerEmail: val.toLowerCase().trim(),
+      });
+    }
+  };
+
+  const handleApplyLowerCaseEmail = () => {
+    setEmail(capsModal.lowerEmail);
+    setCapsModal({ isOpen: false, typedEmail: '', lowerEmail: '' });
+  };
+
+  const handleDismissCapsModal = () => {
+    setCapsModal({ isOpen: false, typedEmail: '', lowerEmail: '' });
+  };
+
+  // Password Security Analysis & Suggestions
+  const securityAnalysis = useMemo(() => {
+    const checks = [
+      { id: 'len', label: 'At least 8 characters', met: password.length >= 8 },
+      { id: 'upper', label: 'Uppercase letter (A-Z)', met: /[A-Z]/.test(password) },
+      { id: 'lower', label: 'Lowercase letter (a-z)', met: /[a-z]/.test(password) },
+      { id: 'num', label: 'Number (0-9)', met: /[0-9]/.test(password) },
+      { id: 'special', label: 'Special symbol (@$!%*?&#)', met: /[^A-Za-z0-9]/.test(password) },
+    ];
+
+    const score = checks.filter((c) => c.met).length;
+    let label = 'Weak';
+    let labelClass = styles.strengthWeak;
+    let activeBars = 1;
+
+    if (score >= 4) {
+      label = 'Strong (Recommended)';
+      labelClass = styles.strengthStrong;
+      activeBars = 4;
+    } else if (score >= 3) {
+      label = 'Good';
+      labelClass = styles.strengthGood;
+      activeBars = 3;
+    } else if (score >= 2) {
+      label = 'Fair';
+      labelClass = styles.strengthFair;
+      activeBars = 2;
+    }
+
+    return { checks, score, label, labelClass, activeBars };
+  }, [password]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    const cleanUsername = (username || name.replace(/\s+/g, '_')).toLowerCase().trim();
+    // Ensure email is strictly lowercased and trimmed
     const cleanEmail = email.toLowerCase().trim();
+    const cleanUsername = (username || name.replace(/\s+/g, '_')).toLowerCase().trim();
+
+    if (!cleanUsername) {
+      setError('Please choose a valid username.');
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch('/api/auth/register', {
@@ -75,6 +163,45 @@ export default function RegisterPage() {
 
   return (
     <div className={styles.authContainer}>
+      {/* Uppercase Email Warning Alert Popup Modal */}
+      {capsModal.isOpen && (
+        <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+          <div className={styles.modalBackdrop} onClick={handleDismissCapsModal} />
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <div className={styles.warningIconBox}>
+                <AlertTriangle size={22} />
+              </div>
+              <h3 className={styles.modalTitle}>Uppercase Email Warning</h3>
+            </div>
+            <p className={styles.modalBody}>
+              Email addresses are case-insensitive standard identifiers, but uppercase letters can lead to sign-in mismatches when typing quickly on mobile devices.
+              <span className={styles.modalEmailPreview}>
+                <span className={styles.emailCapsTyped}>{capsModal.typedEmail}</span>
+                <span className={styles.emailLowerConverted}>&rarr; {capsModal.lowerEmail}</span>
+              </span>
+            </p>
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                onClick={handleDismissCapsModal}
+                className={styles.modalDismissBtn}
+              >
+                Keep As Is
+              </button>
+              <button
+                type="button"
+                onClick={handleApplyLowerCaseEmail}
+                className={styles.modalPrimaryBtn}
+              >
+                <Sparkles size={14} />
+                <span>Convert to Lowercase</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={styles.authCard}>
         {/* Logo and Header */}
         <div className={styles.logoHeader}>
@@ -136,7 +263,7 @@ export default function RegisterPage() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
-                placeholder="e.g. subha_censor"
+                placeholder="e.g. subha_04"
                 required
                 autoComplete="username"
                 className={styles.input}
@@ -145,17 +272,20 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Official Email</label>
+            <label className={styles.label}>
+              <span>Official Email</span>
+              {/[A-Z]/.test(email) && <span className={styles.capsIndicator}>CAPS DETECTED</span>}
+            </label>
             <div className={styles.inputWrapper}>
               <Mail size={16} className={styles.inputIcon} />
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => handleEmailChange(e.target.value)}
                 placeholder="compliance@shortfundly.com"
                 required
                 autoComplete="email"
-                className={styles.input}
+                className={`${styles.input} ${/[A-Z]/.test(email) ? styles.inputWarning : ''}`}
               />
             </div>
           </div>
@@ -176,7 +306,7 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Password (minimum 6 characters)</label>
+            <label className={styles.label}>Security Password</label>
             <div className={styles.inputWrapper}>
               <Lock size={16} className={styles.inputIcon} />
               <input
@@ -190,6 +320,51 @@ export default function RegisterPage() {
                 className={styles.input}
               />
             </div>
+
+            {/* Password Security Meter & Suggestions */}
+            {password.length > 0 && (
+              <div className={styles.securityMeterWrapper}>
+                <div className={styles.strengthBarContainer}>
+                  {[1, 2, 3, 4].map((step) => {
+                    const isActive = step <= securityAnalysis.activeBars;
+                    let barColor = 'rgba(255, 255, 255, 0.1)';
+                    if (isActive) {
+                      if (securityAnalysis.activeBars === 1) barColor = '#ef4444';
+                      else if (securityAnalysis.activeBars === 2) barColor = '#f59e0b';
+                      else if (securityAnalysis.activeBars === 3) barColor = '#38bdf8';
+                      else barColor = '#10b981';
+                    }
+                    return (
+                      <div
+                        key={step}
+                        className={styles.strengthBarStep}
+                        style={{ backgroundColor: barColor }}
+                      />
+                    );
+                  })}
+                </div>
+
+                <div className={styles.strengthMeta}>
+                  <span className={styles.strengthLabel}>
+                    Security Strength: <span className={securityAnalysis.labelClass}>{securityAnalysis.label}</span>
+                  </span>
+                  <span>{securityAnalysis.score}/5 Criteria</span>
+                </div>
+
+                {/* Suggestions Checklist */}
+                <div className={styles.suggestionsList}>
+                  {securityAnalysis.checks.map((c) => (
+                    <div
+                      key={c.id}
+                      className={`${styles.suggestionItem} ${c.met ? styles.suggestionMet : ''}`}
+                    >
+                      {c.met ? <Check size={12} /> : <X size={12} />}
+                      <span>{c.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <button

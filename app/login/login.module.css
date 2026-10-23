@@ -50,35 +50,50 @@
 }
 
 .title {
-  font-size: 1.45rem;
+  font-size: 1.55rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
   color: var(--text-primary);
   margin-bottom: 6px;
+  letter-spacing: -0.01em;
 }
 
 .redHighlight {
   color: var(--accent-primary);
+  text-shadow: 0 0 14px var(--accent-primary-glow);
 }
 
 .subtitle {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-  max-width: 320px;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  max-width: 340px;
+  line-height: 1.45;
 }
 
 .errorAlert {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
-  background: rgba(225, 29, 72, 0.1);
-  border: 1px solid rgba(225, 29, 72, 0.3);
+  padding: 12px 14px;
+  background: rgba(225, 29, 72, 0.12);
+  border: 1px solid rgba(225, 29, 72, 0.35);
   border-radius: 10px;
-  color: var(--accent-rose);
-  font-size: 0.85rem;
-  font-weight: 500;
+  color: #fb7185;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.successAlert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 10px;
+  color: #34d399;
+  font-size: 0.82rem;
+  font-weight: 600;
   margin-bottom: 20px;
 }
 
@@ -91,15 +106,25 @@
 .fieldGroup {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .label {
   font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.capsIndicator {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #f59e0b;
+  letter-spacing: 0.02em;
 }
 
 .inputWrapper {
@@ -113,23 +138,33 @@
   left: 14px;
   color: var(--text-muted);
   pointer-events: none;
+  transition: color 0.2s ease;
 }
 
 .input {
   width: 100%;
-  padding: 12px 14px 12px 42px;
+  padding: 13px 14px 13px 42px;
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: 10px;
   color: var(--text-primary);
-  font-size: 0.92rem;
-  outline: none;
+  font-size: 0.9rem;
   transition: all 0.2s ease;
+  outline: none;
+}
+
+.inputWarning {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.25) !important;
 }
 
 .input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px var(--accent-primary-glow);
+  box-shadow: 0 0 12px var(--accent-primary-glow);
+}
+
+.inputWrapper:focus-within .inputIcon {
+  color: var(--accent-primary);
 }
 
 .submitBtn {
@@ -141,7 +176,7 @@
   padding: 14px;
   background: var(--accent-primary);
   color: #ffffff;
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   border-radius: 10px;
@@ -152,7 +187,6 @@
 .submitBtn:hover:not(:disabled) {
   background: var(--accent-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px var(--accent-primary-glow);
 }
 
 .submitBtn:disabled {
@@ -164,31 +198,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.demoSection {
-  margin-top: 18px;
-  display: flex;
-  justify-content: center;
-}
-
-.demoBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px dashed rgba(245, 158, 11, 0.4);
-  border-radius: 8px;
-  color: var(--accent-secondary);
-  font-size: 0.78rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.demoBtn:hover {
-  background: rgba(245, 158, 11, 0.18);
-  border-color: var(--accent-secondary);
 }
 
 .footerLinks {
@@ -220,4 +229,145 @@
   text-align: center;
   border-top: 1px solid var(--card-border);
   padding-top: 18px;
+}
+
+/* Caps Alert Popup Modal */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modalBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.modalContent {
+  position: relative;
+  z-index: 10;
+  max-width: 440px;
+  width: 100%;
+  background: #11131c;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 16px;
+  padding: 26px 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 158, 11, 0.15);
+  animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.warningIconBox {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modalTitle {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #f8fafc;
+}
+
+.modalBody {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #94a3b8;
+  margin-bottom: 20px;
+}
+
+.modalEmailPreview {
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.emailCapsTyped {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #fbbf24;
+  text-decoration: line-through;
+}
+
+.emailLowerConverted {
+  font-family: monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #10b981;
+}
+
+.modalActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modalPrimaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: #f59e0b;
+  color: #0b0d14;
+  font-size: 0.85rem;
+  font-weight: 750;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.modalPrimaryBtn:hover {
+  background: #d97706;
+}
+
+.modalDismissBtn {
+  padding: 10px 14px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.modalDismissBtn:hover {
+  color: #f8fafc;
 }
