@@ -3,11 +3,12 @@
   width: 100%;
   min-height: calc(100vh - 72px);
   overflow-x: hidden;
+  z-index: 0;
 }
 
 .submitContainer {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: 1300px;
   margin: 0 auto;
   padding: 32px 24px 60px 24px;
@@ -90,16 +91,21 @@
 }
 
 .formCard {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
+  background: rgba(18, 20, 28, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 18px;
   padding: 26px 24px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6), 0 0 25px rgba(229, 28, 35, 0.05);
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+[data-theme='light'] .formCard {
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .cardHeaderLabel {
