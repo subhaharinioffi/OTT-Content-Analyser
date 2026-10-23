@@ -194,14 +194,16 @@ export default function MagicBentoCard({
 
     window.addEventListener('resize', onResize, { passive: true });
 
-    const count = 16;
+    const count = 18;
     const stars = Array.from({ length: count }, () => ({
       x: Math.random() * width,
       y: Math.random() * height,
-      size: Math.random() * 1.5 + 0.5,
-      alpha: Math.random() * 0.4 + 0.1,
-      targetAlpha: Math.random() * 0.5 + 0.1,
-      speed: Math.random() * 0.015 + 0.005,
+      vx: (Math.random() - 0.5) * 0.45,
+      vy: -Math.random() * 0.4 - 0.1, // Floating upwards drift
+      size: Math.random() * 1.6 + 0.6,
+      alpha: Math.random() * 0.5 + 0.15,
+      targetAlpha: Math.random() * 0.6 + 0.2,
+      twinkleSpeed: Math.random() * 0.02 + 0.008,
     }));
 
     const drawStars = () => {
@@ -209,16 +211,28 @@ export default function MagicBentoCard({
 
       for (let i = 0; i < count; i++) {
         const s = stars[i];
-        s.alpha += (s.targetAlpha - s.alpha) * s.speed;
-        if (Math.abs(s.targetAlpha - s.alpha) < 0.02) {
-          s.targetAlpha = Math.random() * 0.5 + 0.08;
+
+        // Particle position drift animation
+        s.x += s.vx;
+        s.y += s.vy;
+
+        // Wrap around boundaries smoothly
+        if (s.x < -10) s.x = width + 10;
+        if (s.x > width + 10) s.x = -10;
+        if (s.y < -10) s.y = height + 10;
+        if (s.y > height + 10) s.y = -10;
+
+        // Twinkling alpha
+        s.alpha += (s.targetAlpha - s.alpha) * s.twinkleSpeed;
+        if (Math.abs(s.targetAlpha - s.alpha) < 0.03) {
+          s.targetAlpha = Math.random() * 0.65 + 0.1;
         }
 
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${s.alpha})`;
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.4)`;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.5)`;
         ctx.fill();
       }
 

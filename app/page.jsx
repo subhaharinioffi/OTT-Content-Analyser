@@ -28,9 +28,9 @@ import styles from './dashboard.module.css';
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const username =
-    session?.user?.username ||
+  const displayName =
     session?.user?.name ||
+    session?.user?.username ||
     session?.user?.email?.split('@')[0] ||
     'Reviewer';
 
@@ -107,14 +107,8 @@ export default function DashboardPage() {
 
       <div className={styles.dashboardContainer}>
         {/* Welcome Reviewer Banner */}
-        <div className={styles.welcomeBanner}>
-          <div className={styles.welcomeGreeting}>
-            <span>Welcome - <strong className={styles.welcomeUsername}>{username}</strong></span>
-          </div>
-          <div className={styles.welcomeMetaBadge}>
-            <Sparkles size={13} />
-            <span>ONLINE REVIEWER SESSION</span>
-          </div>
+        <div className={styles.welcomeTextOnly}>
+          <span>Welcome - <strong className={styles.welcomeNameText}>{displayName}</strong></span>
         </div>
 
         {/* Landing Hero with React Bits <ReflectiveCard /> Specular WebGL Interaction */}
@@ -137,17 +131,6 @@ export default function DashboardPage() {
         >
           <section className={styles.heroSection}>
             <div className={styles.heroLeft}>
-              <div className={styles.heroWelcomeRow}>
-                <div className={styles.heroWelcomePill}>
-                  <User size={13} />
-                  <span>Welcome - <strong>{username}</strong></span>
-                </div>
-                <div className={styles.brandBadge}>
-                  <div className={styles.pulseDot} />
-                  <span>SHORTFUNDLY CENSORAI • REGULATORY INTELLIGENCE</span>
-                </div>
-              </div>
-
               <h1 className={styles.heroTitle}>
                 Next-Gen <span className={styles.redHighlight}>OTT Censorship</span> &amp; Compliance
               </h1>

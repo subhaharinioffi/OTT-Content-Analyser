@@ -48,7 +48,7 @@ export default function SubmitPage() {
   const { data: session } = useSession();
   const fileInputRef = useRef(null);
 
-  const [contentType, setContentType] = useState('Movie');
+  const [contentType, setContentType] = useState('');
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [title, setTitle] = useState('');
   const [synopsis, setSynopsis] = useState('');
@@ -319,6 +319,10 @@ export default function SubmitPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!contentType) {
+      setErrorMessage('Please select an asset format (e.g. Movie, Poster, Short Film, Song, or Reels).');
+      return;
+    }
     if (!file) {
       setErrorMessage('Please select a media file to upload.');
       return;
@@ -617,28 +621,7 @@ export default function SubmitPage() {
                 <label className={styles.cardHeaderLabel}>
                   3. Media File Upload <span className={styles.requiredAsterisk}>*</span>
                 </label>
-                {!filePreview && (
-                  <div className={styles.demoLoadGroup}>
-                    <button
-                      type="button"
-                      onClick={() => handleLoadDemoPoster(false)}
-                      className={styles.quickDemoPill}
-                      title="Load generated 16:9 cinema demo poster"
-                    >
-                      <Sparkles size={13} />
-                      <span>16:9 Demo Poster</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleLoadDemoPoster(true)}
-                      className={styles.quickDemoPill}
-                      title="Load generated 9:16 vertical demo poster"
-                    >
-                      <Sparkles size={13} />
-                      <span>9:16 Demo Poster</span>
-                    </button>
-                  </div>
-                )}
+                
               </div>
 
               {/* Upload Dropzone */}
