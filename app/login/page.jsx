@@ -52,7 +52,27 @@ export default function LoginPage() {
         }
         setLoading(false);
       } else {
-        router.push(res?.url || '/');
+        // Safe relative navigation: always stay on current domain (prevents redirecting to localhost on Vercel)
+        let destination = '/';
+        if (typeof window !== 'undefined') {
+          const params = new URLSearchParams(window.location.search);
+          const callbackParam = params.get('callbackUrl');
+          if (callbackParam) {
+            try {
+              if (callbackParam.startsWith('/') && !callbackParam.startsWith('//')) {
+                destination = callbackParam;
+              } else {
+                const parsed = new URL(callbackParam);
+                if (parsed.origin === window.location.origin) {
+                  destination = parsed.pathname + parsed.search;
+                }
+              }
+            } catch (e) {
+              destination = '/';
+            }
+          }
+        }
+        router.push(destination);
         router.refresh();
       }
     } catch (err) {

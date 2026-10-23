@@ -5,13 +5,21 @@ import { UserModel } from '@/models/User';
 import { ensureSeedData } from '@/lib/seed';
 
 // Ensure NEXTAUTH_URL and NEXTAUTH_SECRET are always set in any environment (Vercel, local, container)
-if (!process.env.NEXTAUTH_URL) {
-  if (process.env.VERCEL_URL) {
-    process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
-  } else if (process.env.NEXT_PUBLIC_VERCEL_URL) {
-    process.env.NEXTAUTH_URL = `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
-  } else {
-    process.env.NEXTAUTH_URL = 'https://ott-content-analyser.vercel.app';
+// In production or Vercel, prevent localhost redirect leaks
+const isLocalhostUrl =
+  !process.env.NEXTAUTH_URL ||
+  process.env.NEXTAUTH_URL.includes('localhost') ||
+  process.env.NEXTAUTH_URL.includes('127.0.0.1');
+
+if (process.env.VERCEL || process.env.VERCEL_URL || process.env.NODE_ENV === 'production') {
+  if (isLocalhostUrl) {
+    if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+      process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+    } else if (process.env.VERCEL_URL) {
+      process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+    } else {
+      process.env.NEXTAUTH_URL = 'https://ott-content-analyser.vercel.app';
+    }
   }
 }
 
@@ -86,11 +94,18 @@ export const authOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      // Relative paths are always safe to return directly
+      if (url.startsWith('/')) return url;
       try {
-        if (new URL(url).origin === baseUrl) return url;
-      } catch (e) {}
-      return baseUrl;
+        const parsed = new URL(url);
+        // Never redirect to localhost in production/Vercel
+        if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+          return '/';
+        }
+        return parsed.pathname + parsed.search;
+      } catch (e) {
+        return '/';
+      }
     },
   },
   pages: {
