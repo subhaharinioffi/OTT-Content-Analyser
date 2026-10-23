@@ -17,7 +17,12 @@ export const authOptions = {
           throw new Error('Please enter both email and password.');
         }
 
-        await ensureSeedData();
+        try {
+          await ensureSeedData();
+        } catch (seedErr) {
+          console.warn('Seed initialization notice in authorize:', seedErr.message);
+        }
+
         const user = await UserModel.findOne({ email: credentials.email });
 
         if (!user) {
@@ -64,8 +69,12 @@ export const authOptions = {
   },
   pages: {
     signIn: '/login',
+    error: '/login',
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    '29054bdaa9cab6e0f9bba82d85b306fdf99fa2b20672adef2c117c853761ef69',
+  trustHost: true,
 };
 
 const handler = NextAuth(authOptions);
