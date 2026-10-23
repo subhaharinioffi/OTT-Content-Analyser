@@ -1,32 +1,23 @@
 'use client';
 
 import { memo, useEffect, useRef, useState } from 'react';
-import { ShieldCheck, Fingerprint } from 'lucide-react';
 import styles from './ReflectiveCard.module.css';
 
 const THEMES = {
   dark: {
-    '--rc-base': '#13151f',
-    '--rc-shadow': '0 24px 48px -20px rgba(0, 0, 0, 0.85), 0 8px 20px -8px rgba(0, 0, 0, 0.6)',
+    '--rc-base': '#11131c',
+    '--rc-shadow': '0 24px 60px -15px rgba(0, 0, 0, 0.85), 0 0 35px -8px rgba(229, 28, 35, 0.25)',
     '--rc-ink': '#f8fafc',
     '--rc-muted': 'rgba(248, 250, 252, 0.65)',
-    '--rc-tile': 'linear-gradient(180deg, #2d2b38 0%, #1a1824 100%)',
-    '--rc-tile-edge': 'rgba(255, 255, 255, 0.08)',
-    '--rc-tile-highlight': 'rgba(255, 255, 255, 0.15)',
-    '--rc-tile-shadow': '0 4px 10px -4px rgba(0, 0, 0, 0.7)',
-    '--rc-rim': 'rgba(229, 28, 35, 0.25)',
-    '--rc-rim-highlight': 'rgba(255, 255, 255, 0.2)',
+    '--rc-rim': 'rgba(229, 28, 35, 0.35)',
+    '--rc-rim-highlight': 'rgba(255, 255, 255, 0.25)',
   },
   light: {
     '--rc-base': '#f8fafc',
     '--rc-shadow': '0 22px 44px -22px rgba(24, 24, 27, 0.2), 0 6px 16px -10px rgba(24, 24, 27, 0.1)',
     '--rc-ink': '#0f172a',
     '--rc-muted': 'rgba(15, 23, 42, 0.65)',
-    '--rc-tile': 'linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%)',
-    '--rc-tile-edge': 'rgba(15, 23, 42, 0.08)',
-    '--rc-tile-highlight': 'rgba(255, 255, 255, 1)',
-    '--rc-tile-shadow': '0 4px 10px -5px rgba(15, 23, 42, 0.15)',
-    '--rc-rim': 'rgba(217, 27, 34, 0.2)',
+    '--rc-rim': 'rgba(217, 27, 34, 0.25)',
     '--rc-rim-highlight': 'rgba(255, 255, 255, 0.8)',
   },
 };
@@ -34,7 +25,6 @@ const THEMES = {
 const VIEW_DISTANCE = 900;
 const OVERSCAN = 1.2;
 const INTRO_MS = 1400;
-const FADE_SECONDS = 0.35;
 
 const VERTEX = `#version 300 es
 in vec2 aPosition;
@@ -284,10 +274,18 @@ void main() {
   float glare = (exp(-reach * 1.6) + exp(-reach * 0.35) * 0.15) * glint * uGlare * (1.0 + 0.8 * (grain - 0.5) * brush);
   float highlight = (softbox(q, sigma) * uShine + glare) * mix(0.4, 1.0, uMetal);
 
-  vec3 dark = vec3(0.005, 0.005, 0.006) + uTint * (scene * 0.05 * uMetal + highlight * 0.36);
-  vec3 light = uTint * (vec3(0.83, 0.83, 0.85) * (1.0 - 0.45 * uMetal * (1.0 - clamp(scene, 0.0, 1.0))) + highlight * 0.35);
+  // Modern metallic obsidian / titanium base
+  vec3 chromeBase = mix(vec3(0.08, 0.09, 0.12), vec3(0.14, 0.16, 0.22), clamp(0.5 + 0.5 * (normal.y + normal.x * 0.3), 0.0, 1.0));
+  
+  // Real specular reflections + pointer glare flare
+  vec3 dark = chromeBase + scene * mix(0.35, 0.70, uMetal) + uTint * (highlight * 0.9);
+  vec3 light = uTint * (vec3(0.85, 0.85, 0.88) * (1.0 - 0.35 * uMetal) + highlight * 0.45);
   vec3 color = mix(dark, light, uTheme);
-  color = min(color, 0.7) + 0.3 * (1.0 - exp(-max(color - 0.7, 0.0) / 0.3));
+  
+  // Polished bevel chamfer highlight
+  color += (uTint * 0.7 + vec3(0.3)) * chamfer * uShine * 0.6;
+
+  color = min(color, 0.85) + 0.15 * (1.0 - exp(-max(color - 0.85, 0.0) / 0.15));
   color = pow(clamp(color, 0.0, 1.0), vec3(1.0 / 2.2));
 
   color += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
@@ -354,48 +352,56 @@ const link = (gl, fragmentSource) => {
   return { program, uniforms };
 };
 
-const coverMap = (width, height, aspect, mirror) => {
-  const ratio = width / Math.max(1, height);
-  const sx = ratio > aspect ? aspect / ratio : 1;
-  const sy = ratio > aspect ? 1 : ratio / aspect;
-  const u = mirror ? -sx : sx;
-  return [u, -sy, 0.5 - u * 0.5, 0.5 + sy * 0.5];
+const coverMap = (sourceWidth, sourceHeight, targetAspect, flipX = false) => {
+  const sourceAspect = sourceWidth / Math.max(1, sourceHeight);
+  let scaleX = 1;
+  let scaleY = 1;
+  let offsetX = 0;
+  let offsetY = 0;
+  if (sourceAspect > targetAspect) {
+    scaleX = targetAspect / sourceAspect;
+    offsetX = (1 - scaleX) * 0.5;
+  } else {
+    scaleY = sourceAspect / targetAspect;
+    offsetY = (1 - scaleY) * 0.5;
+  }
+  if (flipX) {
+    offsetX += scaleX;
+    scaleX = -scaleX;
+  }
+  return [scaleX, scaleY, offsetX, offsetY];
 };
 
-const lodFor = (width, height, envWidth, aspect) => {
-  const ratio = width / Math.max(1, height);
-  const visible = width * (ratio > aspect ? aspect / ratio : 1);
-  return Math.max(0, Math.log2(Math.max(1, visible / Math.max(1, envWidth))) - 0.5);
+const lodFor = (sourceWidth, sourceHeight, targetWidth, targetAspect) => {
+  const sourceAspect = sourceWidth / Math.max(1, sourceHeight);
+  const visibleWidth = sourceAspect > targetAspect ? sourceHeight * targetAspect : sourceWidth;
+  return Math.max(0, Math.log2(visibleWidth / Math.max(1, targetWidth)));
 };
 
 const createRenderer = (canvas) => {
   const gl = canvas.getContext('webgl2', {
     alpha: true,
-    premultipliedAlpha: true,
     antialias: false,
     depth: false,
     stencil: false,
-    powerPreference: 'default',
+    powerPreference: 'high-performance',
+    premultipliedAlpha: true,
+    preserveDrawingBuffer: false,
   });
   if (!gl) return null;
+
   const captureProgram = link(gl, CAPTURE);
   const blurProgram = link(gl, BLUR);
   const plateProgram = link(gl, PLATE);
-  if (!captureProgram || !blurProgram || !plateProgram) {
-    for (const item of [captureProgram, blurProgram, plateProgram]) {
-      if (item) gl.deleteProgram(item.program);
-    }
-    return null;
-  }
+  if (!captureProgram || !blurProgram || !plateProgram) return null;
 
-  const createTexture = (mipmaps, wrap) => {
+  const createTexture = (filter = true, wrap = gl.CLAMP_TO_EDGE) => {
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mipmaps ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter ? gl.LINEAR_MIPMAP_LINEAR : gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter ? gl.LINEAR : gl.NEAREST);
     return texture;
   };
 
@@ -549,20 +555,21 @@ export const ReflectiveCard = ({
   children,
   theme = 'dark',
   videoSrc,
+  imageSrc = '/dashboard-bg.jpg',
   webcam = false,
   onWebcamError,
   tint = '#E51C23',
-  metalness = 0.65,
-  roughness = 0.45,
-  blurStrength = 8,
-  grayscale = 0.6,
+  metalness = 0.75,
+  roughness = 0.32,
+  blurStrength = 7,
+  grayscale = 0.4,
   warp = 0.35,
   warpScale = 1.2,
-  shine = 1.4,
-  bevel = 4,
-  glare = 0.7,
+  shine = 1.7,
+  bevel = 5,
+  glare = 0.85,
   enableTilt = true,
-  tiltStrength = 7,
+  tiltStrength = 12,
   intro = true,
   width = '100%',
   height = 'auto',
@@ -616,7 +623,8 @@ export const ReflectiveCard = ({
     let renderer = null;
     try {
       renderer = createRenderer(canvas);
-    } catch {
+    } catch (e) {
+      console.warn('WebGL2 not available:', e);
       return;
     }
     if (!renderer) return;
@@ -625,7 +633,6 @@ export const ReflectiveCard = ({
     let last = 0;
     let visible = true;
     let active = false;
-    let pressed = false;
     let pointerX = 0;
     let pointerY = 0;
     let currentX = 0;
@@ -636,17 +643,35 @@ export const ReflectiveCard = ({
     let rotateY = 0;
     let lift = 0;
     let targetLift = 0;
-    let glareIntensity = 0;
-    let targetGlare = 0;
+    let glareIntensity = 0.2;
+    let targetGlare = 0.2;
     let presence = settingsRef.current.intro ? 0 : 1;
     let introStart = settingsRef.current.intro ? performance.now() : 0;
-    const video = { ready: false, width: 0, height: 0, dirty: false, mix: 0, targetMix: 0 };
-    const cam = { ready: false, width: 0, height: 0, dirty: false, mix: 0, targetMix: 0 };
+    const video = { ready: false, width: 0, height: 0, mix: 0 };
+    const cam = { ready: false, width: 0, height: 0, mix: 0 };
     let renderWidth = 0;
     let renderHeight = 0;
     let pixelRatio = 1;
+    let envFresh = false;
 
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Load reflection image environment
+    if (imageSrc) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = imageSrc;
+      img.onload = () => {
+        if (renderer && renderer.upload('video', img)) {
+          video.ready = true;
+          video.width = img.naturalWidth || img.width;
+          video.height = img.naturalHeight || img.height;
+          video.mix = 1.0;
+          envFresh = true;
+          wake();
+        }
+      };
+    }
 
     const write = () => {
       const transform = `translate3d(0, ${lift.toFixed(2)}px, 0) rotateX(${rotateX.toFixed(2)}deg) rotateY(${rotateY.toFixed(2)}deg)`;
@@ -664,6 +689,7 @@ export const ReflectiveCard = ({
         presence = clamp((now - introStart) / INTRO_MS, 0, 1);
       }
 
+      // Silky spring physics for tilt, lift, and glare
       const smoothFactor = 1 - Math.exp(-dt * 12);
       rotateX += (targetRotateX - rotateX) * smoothFactor;
       rotateY += (targetRotateY - rotateY) * smoothFactor;
@@ -675,12 +701,25 @@ export const ReflectiveCard = ({
       write();
 
       if (renderer) {
+        if (envFresh && video.mix > 0) {
+          renderer.renderEnv({
+            width: renderWidth,
+            height: renderHeight,
+            scale: pixelRatio,
+            blur: s.blurStrength,
+            roughness: s.roughness,
+            video,
+            cam,
+          });
+          envFresh = false;
+        }
+
         renderer.renderPlate({
           width: renderWidth,
           height: renderHeight,
           rotateX: (rotateX * Math.PI) / 180,
           rotateY: (rotateY * Math.PI) / 180,
-          capture: 0,
+          capture: video.mix,
           glare: glareIntensity,
           pointerX: currentX,
           pointerY: currentY,
@@ -704,7 +743,7 @@ export const ReflectiveCard = ({
 
     const onEnter = (e) => {
       active = true;
-      targetGlare = 1;
+      targetGlare = 1.0;
       targetLift = -6;
       const rect = body.getBoundingClientRect();
       pointerX = e.clientX - rect.left - rect.width / 2;
@@ -731,7 +770,7 @@ export const ReflectiveCard = ({
       targetRotateX = 0;
       targetRotateY = 0;
       targetLift = 0;
-      targetGlare = 0;
+      targetGlare = 0.2;
       wake();
     };
 
@@ -743,6 +782,7 @@ export const ReflectiveCard = ({
       renderHeight = rect.height;
       canvas.width = Math.round(rect.width * pixelRatio);
       canvas.height = Math.round(rect.height * pixelRatio);
+      envFresh = true;
     };
 
     const resizeObserver = new ResizeObserver(() => {
@@ -775,7 +815,7 @@ export const ReflectiveCard = ({
       root.removeEventListener('pointerleave', onLeave);
       renderer?.dispose();
     };
-  }, [generation]);
+  }, [generation, imageSrc]);
 
   const corner = Math.max(0, radius);
   const cardStyle = {

@@ -102,14 +102,15 @@ export default function DashboardPage() {
           height="auto"
           radius={24}
           tint="#E51C23"
-          metalness={0.7}
-          roughness={0.35}
-          shine={1.5}
-          glare={0.75}
-          warp={0.3}
+          imageSrc="/dashboard-bg.jpg"
+          metalness={0.78}
+          roughness={0.28}
+          shine={1.8}
+          glare={0.9}
+          warp={0.35}
           warpScale={1.2}
-          bevel={4}
-          tiltStrength={8}
+          bevel={5}
+          tiltStrength={12}
           enableTilt={true}
           className={styles.heroReflectiveCardWrapper}
         >
