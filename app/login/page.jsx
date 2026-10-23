@@ -13,12 +13,15 @@ import {
   CheckCircle,
   AlertTriangle,
   Sparkles,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import styles from './login.module.css';
 
 function LoginForm() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
@@ -231,14 +234,24 @@ function LoginForm() {
             <div className={styles.inputWrapper}>
               <Lock size={16} className={styles.inputIcon} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 required
                 autoComplete="current-password"
                 className={styles.input}
+                style={{ paddingRight: "42px" }}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className={styles.togglePasswordBtn}
+                title={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 

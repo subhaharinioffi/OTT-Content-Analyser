@@ -18,6 +18,8 @@ import {
   Check,
   X,
   Sparkles,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import styles from './register.module.css';
 
@@ -26,6 +28,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [organization, setOrganization] = useState('Cinema Studio Labs');
   const [role, setRole] = useState('reviewer');
   const [loading, setLoading] = useState(false);
@@ -310,7 +313,7 @@ export default function RegisterPage() {
             <div className={styles.inputWrapper}>
               <Lock size={16} className={styles.inputIcon} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
@@ -318,7 +321,17 @@ export default function RegisterPage() {
                 minLength={6}
                 autoComplete="new-password"
                 className={styles.input}
+                style={{ paddingRight: "42px" }}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className={styles.togglePasswordBtn}
+                title={showPassword ? "Hide password" : "Show password"}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
 
             {/* Password Security Meter & Suggestions */}

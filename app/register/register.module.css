@@ -456,3 +456,22 @@
 .modalDismissBtn:hover {
   color: #f8fafc;
 }
+
+.togglePasswordBtn {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.2s ease;
+}
+
+.togglePasswordBtn:hover {
+  color: var(--text-primary);
+}
