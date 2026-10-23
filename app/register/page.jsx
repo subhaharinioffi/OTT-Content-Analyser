@@ -2,15 +2,14 @@
 
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShieldCheck, Lock, Mail, User, Building, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, User, Building, ArrowRight, AlertCircle, CheckCircle, AtSign } from 'lucide-react';
 import styles from './register.module.css';
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [organization, setOrganization] = useState('Cinema Studio Labs');
@@ -24,11 +23,21 @@ export default function RegisterPage() {
     setLoading(true);
     setError('');
 
+    const cleanUsername = (username || name.replace(/\s+/g, '_')).toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim();
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, organization, role }),
+        body: JSON.stringify({
+          name: name.trim(),
+          username: cleanUsername,
+          email: cleanEmail,
+          password,
+          organization: organization.trim(),
+          role,
+        }),
       });
 
       const data = await res.json();
@@ -41,21 +50,25 @@ export default function RegisterPage() {
 
       setSuccess(true);
 
-      // Automatically sign in
+      // Automatically sign in with credentials
       const loginRes = await signIn('credentials', {
-        email,
+        username: cleanUsername,
+        email: cleanEmail,
         password,
         redirect: false,
+        callbackUrl: '/',
       });
 
       if (!loginRes?.error) {
-        router.push('/');
-        router.refresh();
+        // Direct origin navigation ensures session cookies are recognized on mobile browsers
+        window.location.href = '/';
       } else {
-        router.push('/login');
+        // If automatic login experienced a transient mobile token delay, redirect to login with prefill
+        window.location.href = `/login?registered=true&user=${encodeURIComponent(cleanUsername || cleanEmail)}`;
       }
     } catch (err) {
-      setError('An unexpected error occurred during registration.');
+      console.error('[Register Error]', err);
+      setError('An unexpected error occurred during registration. Please try again.');
       setLoading(false);
     }
   };
@@ -94,7 +107,7 @@ export default function RegisterPage() {
         {success && (
           <div className={styles.successAlert}>
             <CheckCircle size={16} />
-            <span>Account created! Redirecting to studio workspace...</span>
+            <span>Account created! Entering studio workspace...</span>
           </div>
         )}
 
@@ -108,7 +121,7 @@ export default function RegisterPage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Subhaharini S"
+                placeholder="e.g. Subhaharini S"
                 required
                 className={styles.input}
               />
@@ -116,52 +129,54 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Official Studio Email</label>
+            <label className={styles.label}>Username</label>
+            <div className={styles.inputWrapper}>
+              <AtSign size={16} className={styles.inputIcon} />
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
+                placeholder="e.g. subha_censor"
+                required
+                autoComplete="username"
+                className={styles.input}
+              />
+            </div>
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>Official Email</label>
             <div className={styles.inputWrapper}>
               <Mail size={16} className={styles.inputIcon} />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="compliance@studio.com"
+                placeholder="compliance@shortfundly.com"
+                required
+                autoComplete="email"
+                className={styles.input}
+              />
+            </div>
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.label}>Studio Organization</label>
+            <div className={styles.inputWrapper}>
+              <Building size={16} className={styles.inputIcon} />
+              <input
+                type="text"
+                value={organization}
+                onChange={(e) => setOrganization(e.target.value)}
+                placeholder="e.g. Prime Cinema Labs"
                 required
                 className={styles.input}
               />
             </div>
           </div>
 
-          <div className={styles.fieldRow}>
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Studio / Production</label>
-              <div className={styles.inputWrapper}>
-                <Building size={16} className={styles.inputIcon} />
-                <input
-                  type="text"
-                  value={organization}
-                  onChange={(e) => setOrganization(e.target.value)}
-                  placeholder="Shortfundly Media"
-                  required
-                  className={styles.input}
-                />
-              </div>
-            </div>
-
-            <div className={styles.fieldGroup}>
-              <label className={styles.label}>Access Role</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className={styles.select}
-              >
-                <option value="reviewer">Reviewer</option>
-                <option value="creator">Creator / Director</option>
-                <option value="admin">Regulatory Lead</option>
-              </select>
-            </div>
-          </div>
-
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Password (min 6 chars)</label>
+            <label className={styles.label}>Password (minimum 6 characters)</label>
             <div className={styles.inputWrapper}>
               <Lock size={16} className={styles.inputIcon} />
               <input
@@ -171,6 +186,7 @@ export default function RegisterPage() {
                 placeholder="••••••••••••"
                 required
                 minLength={6}
+                autoComplete="new-password"
                 className={styles.input}
               />
             </div>
@@ -178,11 +194,11 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            disabled={loading || success}
+            disabled={loading}
             className={styles.submitBtn}
           >
             {loading ? (
-              <span className={styles.loadingSpinner}>Creating Studio Account...</span>
+              <span className={styles.loadingSpinner}>Creating Account...</span>
             ) : (
               <>
                 <span>Complete Registration</span>
@@ -194,16 +210,16 @@ export default function RegisterPage() {
 
         {/* Switch to Login */}
         <div className={styles.footerLinks}>
-          <span className={styles.footerText}>Already have an account?</span>{' '}
+          <span className={styles.footerText}>Already registered?</span>{' '}
           <Link href="/login" className={styles.link}>
-            Sign In Here
+            Sign In with Username / Password
           </Link>
         </div>
 
         {/* Regulatory Badge */}
         <div className={styles.complianceBadge}>
           <ShieldCheck size={14} />
-          <span>Strictly Encrypted • Real-time MongoDB & Cloudinary Integration</span>
+          <span>Encrypted Studio Session • CBFC Section 5B Audited</span>
         </div>
       </div>
     </div>

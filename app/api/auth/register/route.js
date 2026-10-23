@@ -5,7 +5,7 @@ import { UserModel } from '@/models/User';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { name, email, password, role, organization } = body;
+    const { name, username, email, password, role, organization } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -21,11 +21,17 @@ export async function POST(request) {
       );
     }
 
+    const cleanEmail = email.toLowerCase().trim();
+    const cleanUsername = (username || name.replace(/\s+/g, '_')).toLowerCase().trim();
+
     // Check if user already exists
-    const existing = await UserModel.findOne({ email });
+    const existing =
+      (await UserModel.findByIdentifier(cleanEmail)) ||
+      (await UserModel.findByIdentifier(cleanUsername));
+
     if (existing) {
       return NextResponse.json(
-        { error: 'An account with this email address already exists.' },
+        { error: 'An account with this username or email already exists.' },
         { status: 409 }
       );
     }
@@ -33,10 +39,11 @@ export async function POST(request) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user and persist across Cloudinary global store
     const newUser = await UserModel.create({
       name,
-      email,
+      username: cleanUsername,
+      email: cleanEmail,
       password: hashedPassword,
       role: role || 'reviewer',
       organization: organization || 'Cinema Compliance Studio',
@@ -46,8 +53,9 @@ export async function POST(request) {
       {
         message: 'Account registered successfully.',
         user: {
-          id: newUser._id || newUser.id,
+          id: newUser._id?.toString() || newUser.id,
           name: newUser.name,
+          username: newUser.username,
           email: newUser.email,
           role: newUser.role,
         },

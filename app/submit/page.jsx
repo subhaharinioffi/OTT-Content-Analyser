@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import styles from './submit.module.css';
 import CinemaVideoWallBg from '@/components/CinemaVideoWallBg';
+import MagicBentoCard from '@/components/MagicBentoCard';
 
 const CONTENT_TYPES = [
   { id: 'Poster (img)', label: 'Poster (img)', icon: ImageIcon, defaultAspect: '16:9', desc: 'High-res promotional one-sheet or key visual' },
@@ -525,7 +526,7 @@ export default function SubmitPage() {
           {/* Left Column: Content Type & Details */}
           <div className={styles.leftColumn}>
             {/* Step 3.1: Content Type Options Array */}
-            <div className={styles.formCard}>
+            <MagicBentoCard className={styles.formCard} glowColor="#E51C23" enableStars={true} enableTilt={false}>
               <label className={styles.cardHeaderLabel}>
                 1. Select Asset Format <span className={styles.requiredAsterisk}>*</span>
               </label>
@@ -551,10 +552,10 @@ export default function SubmitPage() {
                   );
                 })}
               </div>
-            </div>
+            </MagicBentoCard>
 
             {/* Step 3.2: Aspect Ratio & Metadata */}
-            <div className={styles.formCard}>
+            <MagicBentoCard className={styles.formCard} glowColor="#F59E0B" enableStars={true} enableTilt={false}>
               <label className={styles.cardHeaderLabel}>2. Aspect Ratio & Orientation</label>
               <div className={styles.aspectRatioRow}>
                 <button
@@ -606,12 +607,12 @@ export default function SubmitPage() {
                   />
                 </div>
               </div>
-            </div>
+            </MagicBentoCard>
           </div>
 
           {/* Right Column: File Upload & Live Preview */}
           <div className={styles.rightColumn}>
-            <div className={styles.formCard}>
+            <MagicBentoCard className={styles.formCard} glowColor="#38BDF8" enableStars={true} enableTilt={false}>
               <div className={styles.uploadHeaderRow}>
                 <label className={styles.cardHeaderLabel}>
                   3. Media File Upload <span className={styles.requiredAsterisk}>*</span>
@@ -732,7 +733,7 @@ export default function SubmitPage() {
                 <ShieldCheck size={14} />
                 <span>Media processed with strict confidentiality & stored securely on Cloudinary CDN.</span>
               </div>
-            </div>
+            </MagicBentoCard>
           </div>
         </form>
       )}

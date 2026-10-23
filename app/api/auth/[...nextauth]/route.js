@@ -5,7 +5,6 @@ import { UserModel } from '@/models/User';
 import { ensureSeedData } from '@/lib/seed';
 
 // Ensure NEXTAUTH_URL and NEXTAUTH_SECRET are always set in any environment (Vercel, local, container)
-// In production or Vercel, prevent localhost redirect leaks
 const isLocalhostUrl =
   !process.env.NEXTAUTH_URL ||
   process.env.NEXTAUTH_URL.includes('localhost') ||
@@ -36,12 +35,16 @@ export const authOptions = {
       id: 'credentials',
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email', placeholder: 'compliance@cinema.io' },
+        username: { label: 'Username or Email', type: 'text' },
+        email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Please enter both email and password.');
+        const identifier = (credentials?.username || credentials?.email || '').trim();
+        const password = credentials?.password || '';
+
+        if (!identifier || !password) {
+          throw new Error('Please enter both username (or email) and password.');
         }
 
         try {
@@ -50,13 +53,13 @@ export const authOptions = {
           console.warn('Seed initialization notice in authorize:', seedErr.message);
         }
 
-        const user = await UserModel.findOne({ email: credentials.email });
+        const user = await UserModel.findByIdentifier(identifier);
 
         if (!user) {
-          throw new Error('No account found with this email address.');
+          throw new Error('No account found with this username or email.');
         }
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        const isValid = await bcrypt.compare(password, user.password);
 
         if (!isValid) {
           throw new Error('Incorrect password. Please verify your credentials.');
@@ -65,6 +68,7 @@ export const authOptions = {
         return {
           id: user._id?.toString() || user.id,
           name: user.name,
+          username: user.username || user.name.replace(/\s+/g, '_').toLowerCase(),
           email: user.email,
           role: user.role || 'reviewer',
           organization: user.organization || 'Cinema Compliance Studio',
@@ -80,6 +84,8 @@ export const authOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.username = user.username;
+        token.name = user.name;
         token.role = user.role;
         token.organization = user.organization;
       }
@@ -88,6 +94,8 @@ export const authOptions = {
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id;
+        session.user.username = token.username || token.name;
+        session.user.name = token.name;
         session.user.role = token.role;
         session.user.organization = token.organization;
       }
@@ -102,7 +110,6 @@ export const authOptions = {
         activeBase = 'https://ott-content-analyser.vercel.app';
       }
 
-      // NextAuth client new URL(data.url) requires an absolute URL string
       if (url.startsWith('/')) {
         return `${activeBase}${url}`;
       }

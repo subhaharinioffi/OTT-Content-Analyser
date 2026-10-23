@@ -1,27 +1,37 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShieldCheck, Lock, Mail, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { ShieldCheck, Lock, User, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
 import styles from './login.module.css';
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
+function LoginForm() {
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [infoMsg, setInfoMsg] = useState('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlError = params.get('error');
+      const registered = params.get('registered');
+      const prefillUser = params.get('user');
+
+      if (prefillUser) {
+        setUsername(prefillUser);
+      }
+
+      if (registered) {
+        setInfoMsg('Account created successfully! Please sign in with your credentials.');
+      }
+
       if (urlError && urlError !== 'Configuration') {
         if (urlError === 'CredentialsSignin') {
-          setError('Incorrect email or password. Please verify your credentials.');
+          setError('Incorrect username/email or password. Please verify your credentials.');
         } else {
           setError(urlError);
         }
@@ -33,10 +43,13 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setInfoMsg('');
 
     try {
+      const trimmedIdentifier = username.trim();
       const res = await signIn('credentials', {
-        email,
+        username: trimmedIdentifier,
+        email: trimmedIdentifier,
         password,
         redirect: false,
         callbackUrl: '/',
@@ -44,15 +57,15 @@ export default function LoginPage() {
 
       if (res?.error) {
         if (res.error === 'CredentialsSignin') {
-          setError('Incorrect email or password. Please verify your credentials.');
+          setError('Incorrect username/email or password. Please verify your credentials.');
         } else if (res.error === 'Configuration') {
-          setError('Authentication server connecting. Please click Sign In again.');
+          setError('Connecting to authentication service. Please click Sign In again.');
         } else {
           setError(res.error);
         }
         setLoading(false);
       } else {
-        // Successful login: Navigate directly to dashboard on current origin
+        // Successful login: Direct origin navigation guarantees session cookie persistence on mobile
         let destination = '/';
         if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search);
@@ -68,11 +81,6 @@ export default function LoginPage() {
       setError(err?.message || 'An unexpected authentication error occurred.');
       setLoading(false);
     }
-  };
-
-  const handleQuickDemo = () => {
-    setEmail('demo.reviewer@cinecomply.io');
-    setPassword('Compliance2026!');
   };
 
   return (
@@ -98,6 +106,14 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Info / Success Alert */}
+        {infoMsg && (
+          <div className={styles.successAlert}>
+            <CheckCircle size={16} />
+            <span>{infoMsg}</span>
+          </div>
+        )}
+
         {/* Error Alert */}
         {error && (
           <div className={styles.errorAlert}>
@@ -109,15 +125,16 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Official Email</label>
+            <label className={styles.label}>Username or Email</label>
             <div className={styles.inputWrapper}>
-              <Mail size={16} className={styles.inputIcon} />
+              <User size={16} className={styles.inputIcon} />
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="reviewer@ottstudio.com"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username or email"
                 required
+                autoComplete="username"
                 className={styles.input}
               />
             </div>
@@ -133,6 +150,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 required
+                autoComplete="current-password"
                 className={styles.input}
               />
             </div>
@@ -154,18 +172,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Quick Demo Autofill */}
-        <div className={styles.demoSection}>
-          <button
-            type="button"
-            onClick={handleQuickDemo}
-            className={styles.demoBtn}
-          >
-            <Sparkles size={14} />
-            <span>Fill Demo Reviewer Credentials</span>
-          </button>
-        </div>
-
         {/* Switch to Register */}
         <div className={styles.footerLinks}>
           <span className={styles.footerText}>New compliance officer?</span>{' '}
@@ -181,5 +187,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className={styles.authContainer} />}>
+      <LoginForm />
+    </Suspense>
   );
 }
