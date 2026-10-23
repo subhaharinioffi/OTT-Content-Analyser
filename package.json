@@ -1,0 +1,25 @@
+{
+  "name": "ott-guidelines-regulatory-compliance",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@google/genai": "^0.2.0",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.5.1",
+    "jspdf": "^2.5.2",
+    "jspdf-autotable": "^3.8.4",
+    "lucide-react": "^0.453.0",
+    "mongoose": "^8.7.2",
+    "next": "^14.2.15",
+    "next-auth": "^4.24.10",
+    "next-themes": "^0.3.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

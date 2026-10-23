@@ -1,0 +1,138 @@
+:root {
+  /* Studio Daylight (Light Theme) */
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #F1F5F9;
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --card-elevated: #FFFFFF;
+  --card-border: #E2E8F0;
+  --card-border-focus: rgba(229, 28, 35, 0.5);
+  --card-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  --accent-primary: #D91B22;
+  --accent-primary-hover: #B7141A;
+  --accent-primary-glow: rgba(217, 27, 34, 0.2);
+  --accent-secondary: #D97706;
+  --accent-cyan: #0284C7;
+  --accent-emerald: #10B981;
+  --accent-rose: #E11D48;
+
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+
+  --nav-bg: rgba(255, 255, 255, 0.85);
+  --input-bg: #FFFFFF;
+  --input-border: #CBD5E1;
+
+  --badge-bg: #F1F5F9;
+  --badge-border: #E2E8F0;
+  --table-hover: #F8FAFC;
+  --code-bg: #F1F5F9;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+[data-theme="dark"],
+body.dark {
+  /* Dolby Cinema Obsidian (Dark Theme - Default) */
+  --bg-primary: #090A0F;
+  --bg-secondary: #0F111A;
+  --card-bg: rgba(18, 20, 28, 0.85);
+  --card-elevated: rgba(26, 29, 41, 0.95);
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-border-focus: rgba(229, 28, 35, 0.6);
+  --card-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.6), 0 0 25px rgba(229, 28, 35, 0.05);
+
+  --accent-primary: #E51C23;
+  --accent-primary-hover: #FF2E36;
+  --accent-primary-glow: rgba(229, 28, 35, 0.35);
+  --accent-secondary: #F59E0B;
+  --accent-cyan: #38BDF8;
+  --accent-emerald: #34D399;
+  --accent-rose: #FB7185;
+
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+
+  --nav-bg: rgba(9, 10, 15, 0.82);
+  --input-bg: rgba(14, 16, 24, 0.9);
+  --input-border: rgba(255, 255, 255, 0.12);
+
+  --badge-bg: rgba(255, 255, 255, 0.05);
+  --badge-border: rgba(255, 255, 255, 0.1);
+  --table-hover: rgba(255, 255, 255, 0.03);
+  --code-bg: rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cinema background subtle grid and atmospheric glows */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  background: 
+    radial-gradient(circle at 15% 15%, rgba(229, 28, 35, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, rgba(245, 158, 11, 0.04) 0%, transparent 40%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
+  z-index: -1;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+input, select, textarea {
+  font-family: inherit;
+}
+
+/* Glassmorphism scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--card-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary);
+}
