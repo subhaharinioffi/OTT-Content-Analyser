@@ -8,58 +8,98 @@ export const maxDuration = 60;
 
 export async function POST(request) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file');
-    const title = formData.get('title') || 'Untitled Asset';
-    const contentType = formData.get('contentType') || 'Movie';
-    const aspectRatio = formData.get('aspectRatio') || '16:9';
-    const userEmail = formData.get('userEmail') || 'creator@cinema.io';
-    const targetRatingGoal = formData.get('targetRatingGoal') || 'Auto-Detect (Standard Assessment)';
-    let duration = parseFloat(formData.get('duration') || '0');
+    let title = 'Untitled Asset';
+    let contentType = 'Movie';
+    let aspectRatio = '16:9';
+    let userEmail = 'creator@cinema.io';
+    let targetRatingGoal = 'Auto-Detect (Standard Assessment)';
+    let duration = 0;
+    let cloudinaryUrl = '';
+    let publicId = '';
+    let fileSize = 0;
+    let buffer = null;
+    let mimeType = 'video/mp4';
 
-    if (!file) {
+    const contentTypeHeader = request.headers.get('content-type') || '';
+
+    // Handle JSON payload (from Direct Client-to-Cloudinary upload)
+    if (contentTypeHeader.includes('application/json')) {
+      const jsonBody = await request.json();
+      title = jsonBody.title || title;
+      contentType = jsonBody.contentType || contentType;
+      aspectRatio = jsonBody.aspectRatio || aspectRatio;
+      userEmail = jsonBody.userEmail || userEmail;
+      targetRatingGoal = jsonBody.targetRatingGoal || targetRatingGoal;
+      duration = parseFloat(jsonBody.duration || '0');
+      cloudinaryUrl = jsonBody.cloudinaryUrl || '';
+      publicId = jsonBody.publicId || '';
+      fileSize = jsonBody.fileSize || 0;
+      mimeType = jsonBody.mimeType || mimeType;
+
+      console.log(`[Analyze API JSON] Processing "${title}" (${contentType}), Cloudinary URL: ${cloudinaryUrl}`);
+    } else {
+      // Handle Multipart Form Data payload (fallback for small files / images)
+      const formData = await request.formData();
+      const file = formData.get('file');
+      title = formData.get('title') || title;
+      contentType = formData.get('contentType') || contentType;
+      aspectRatio = formData.get('aspectRatio') || aspectRatio;
+      userEmail = formData.get('userEmail') || userEmail;
+      targetRatingGoal = formData.get('targetRatingGoal') || targetRatingGoal;
+      duration = parseFloat(formData.get('duration') || '0');
+
+      if (!file) {
+        return NextResponse.json(
+          { error: 'No media file provided for analysis.' },
+          { status: 400 }
+        );
+      }
+
+      const bytes = await file.arrayBuffer();
+      buffer = Buffer.from(bytes);
+      mimeType = file.type || mimeType;
+      fileSize = buffer.length;
+
+      console.log(`[Analyze API Multipart] Processing file "${title}", size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
+
+      // Upload buffer to Cloudinary
+      try {
+        const cloudinaryResult = await uploadToCloudinary(buffer, {
+          resource_type: 'auto',
+          public_id: `ott_${Date.now()}_${title.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+        });
+        cloudinaryUrl = cloudinaryResult.secure_url;
+        publicId = cloudinaryResult.public_id;
+        if (cloudinaryResult.duration && !duration) {
+          duration = Math.round(cloudinaryResult.duration);
+        }
+        console.log('[Analyze API Multipart] Cloudinary upload successful:', cloudinaryUrl);
+      } catch (uploadErr) {
+        console.error('[Analyze API Multipart] Cloudinary upload failed:', uploadErr);
+        return NextResponse.json(
+          { error: `Cloudinary media storage failed: ${uploadErr.message}` },
+          { status: 500 }
+        );
+      }
+    }
+
+    if (!cloudinaryUrl) {
       return NextResponse.json(
-        { error: 'No media file provided for analysis.' },
+        { error: 'Media URL missing. Please re-upload your file.' },
         { status: 400 }
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const mimeType = file.type || 'video/mp4';
-
-    console.log(`[Analyze API] Processing file "${title}", size: ${(buffer.length / 1024 / 1024).toFixed(2)} MB, target: ${targetRatingGoal}`);
-
-    // Step 1: Upload to Cloudinary
-    let cloudinaryResult = null;
-    try {
-      cloudinaryResult = await uploadToCloudinary(buffer, {
-        resource_type: 'auto',
-        public_id: `ott_${Date.now()}_${title.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
-      });
-      console.log('[Analyze API] Cloudinary upload successful:', cloudinaryResult.secure_url);
-    } catch (uploadErr) {
-      console.error('[Analyze API] Cloudinary upload failed:', uploadErr);
-      return NextResponse.json(
-        { error: `Cloudinary media storage failed: ${uploadErr.message}` },
-        { status: 500 }
-      );
-    }
-
-    if (cloudinaryResult.duration && !duration) {
-      duration = Math.round(cloudinaryResult.duration);
-    }
-
-    // Step 2: Multi-modal AI Regulatory Analysis via Gemini 2.5 Flash API
-    console.log('[Analyze API] Invoking Gemini Compliance Engine with Target Rating Goal:', targetRatingGoal);
+    // Step 2: Multi-modal AI Regulatory Analysis via Gemini Engine
+    console.log('[Analyze API] Invoking Gemini Compliance Engine for:', title);
     const complianceAnalysis = await analyzeMediaCompliance({
-      fileBuffer: buffer,
+      fileBuffer: buffer, // will be null for large client-uploaded videos
       mimeType: mimeType,
       title: title,
       contentType: contentType,
       aspectRatio: aspectRatio,
       duration: duration,
-      cloudinaryUrl: cloudinaryResult.secure_url,
+      cloudinaryUrl: cloudinaryUrl,
       targetRatingGoal: targetRatingGoal,
     });
 
@@ -69,9 +109,9 @@ export async function POST(request) {
       title,
       contentType,
       aspectRatio,
-      mediaUrl: cloudinaryResult.secure_url,
-      publicId: cloudinaryResult.public_id,
-      fileSize: buffer.length,
+      mediaUrl: cloudinaryUrl,
+      publicId: publicId,
+      fileSize: fileSize,
       duration: duration,
       userEmail,
       ageClassification: complianceAnalysis.assignedRating || complianceAnalysis.ageClassification || 'U/A 13+',

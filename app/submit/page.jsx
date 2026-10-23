@@ -358,22 +358,88 @@ export default function SubmitPage() {
     }, 2800);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('title', title.trim());
-      formData.append('contentType', contentType);
-      formData.append('targetRatingGoal', targetRatingGoal);
-      formData.append('aspectRatio', aspectRatio);
-      formData.append('duration', fileDuration.toString());
-      formData.append('userEmail', session?.user?.email || 'creator@cinema.io');
+      let cloudinaryUrl = '';
+      let publicId = '';
 
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        body: formData,
-      });
+      // Direct client upload to Cloudinary for large files or videos/audio
+      // This bypasses Vercel's strict 4.5 MB serverless body payload limit
+      const isLargeOrVideo = file.size > 3.5 * 1024 * 1024 || !file.type.startsWith('image/');
+
+      if (isLargeOrVideo) {
+        const signRes = await fetch('/api/cloudinary-sign', { method: 'POST' });
+        const signData = await signRes.json();
+        if (!signRes.ok) {
+          throw new Error('Could not authorize secure CDN media upload.');
+        }
+
+        const cloudForm = new FormData();
+        cloudForm.append('file', file);
+        cloudForm.append('api_key', signData.apiKey);
+        cloudForm.append('timestamp', signData.timestamp.toString());
+        cloudForm.append('signature', signData.signature);
+        cloudForm.append('folder', signData.folder);
+
+        const cloudRes = await fetch(
+          `https://api.cloudinary.com/v1_1/${signData.cloudName}/auto/upload`,
+          {
+            method: 'POST',
+            body: cloudForm,
+          }
+        );
+
+        const cloudResult = await cloudRes.json();
+        if (!cloudRes.ok) {
+          throw new Error(cloudResult.error?.message || 'Media CDN upload failed.');
+        }
+
+        cloudinaryUrl = cloudResult.secure_url;
+        publicId = cloudResult.public_id;
+      }
+
+      let res;
+      if (cloudinaryUrl) {
+        res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: title.trim(),
+            contentType,
+            targetRatingGoal,
+            aspectRatio,
+            duration: fileDuration,
+            userEmail: session?.user?.email || 'creator@cinema.io',
+            cloudinaryUrl,
+            publicId,
+            fileSize: file.size,
+            mimeType: file.type || 'video/mp4',
+          }),
+        });
+      } else {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('title', title.trim());
+        formData.append('contentType', contentType);
+        formData.append('targetRatingGoal', targetRatingGoal);
+        formData.append('aspectRatio', aspectRatio);
+        formData.append('duration', fileDuration.toString());
+        formData.append('userEmail', session?.user?.email || 'creator@cinema.io');
+
+        res = await fetch('/api/analyze', {
+          method: 'POST',
+          body: formData,
+        });
+      }
 
       clearInterval(interval);
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        const text = await res.text();
+        throw new Error(text || 'Regulatory service returned an unexpected response format.');
+      }
 
       if (!res.ok) {
         throw new Error(data.error || 'Regulatory compliance analysis failed.');
