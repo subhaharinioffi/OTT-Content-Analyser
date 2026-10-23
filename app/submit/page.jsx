@@ -24,6 +24,7 @@ import {
   FileQuestion,
 } from 'lucide-react';
 import styles from './submit.module.css';
+import CinemaVideoWallBg from '@/components/CinemaVideoWallBg';
 
 const CONTENT_TYPES = [
   { id: 'Poster (img)', label: 'Poster (img)', icon: ImageIcon, defaultAspect: '16:9', desc: 'High-res promotional one-sheet or key visual' },
@@ -375,7 +376,11 @@ export default function SubmitPage() {
   };
 
   return (
-    <div className={styles.submitContainer}>
+    <div className={styles.submitWrapper}>
+      {/* Seamless Looping OTT Video Wall Background with Crimson Sweep & Cinema Dust */}
+      <CinemaVideoWallBg />
+
+      <div className={styles.submitContainer}>
       {/* Warning Popup Modal for Incompatible File Formats */}
       {warningModal.isOpen && (
         <div className={styles.modalOverlay} role="dialog" aria-modal="true">
@@ -731,6 +736,7 @@ export default function SubmitPage() {
           </div>
         </form>
       )}
+      </div>
     </div>
   );
 }

@@ -1,4 +1,13 @@
+.submitWrapper {
+  position: relative;
+  width: 100%;
+  min-height: calc(100vh - 72px);
+  overflow-x: hidden;
+}
+
 .submitContainer {
+  position: relative;
+  z-index: 1;
   max-width: 1300px;
   margin: 0 auto;
   padding: 32px 24px 60px 24px;
