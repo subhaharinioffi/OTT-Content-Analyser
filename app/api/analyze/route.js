@@ -4,6 +4,7 @@ import { analyzeMediaCompliance } from '@/lib/gemini';
 import { ReportModel } from '@/models/Report';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function POST(request) {
   try {
