@@ -1,0 +1,175 @@
+.tiltedCard {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  outline: none;
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  width: 100%;
+}
+
+.tiltedCard[data-interactive] {
+  cursor: pointer;
+}
+
+.tiltedCard[data-active] {
+  z-index: 10;
+}
+
+.tiltedCardShadow {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  max-width: 100%;
+  max-height: 100%;
+  background: var(--tc-shadow-color, rgba(0, 0, 0, 0.55));
+  filter: blur(24px);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  border-radius: inherit;
+}
+
+.tiltedCardBody {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  transform-style: preserve-3d;
+}
+
+.tiltedCardFace {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--tc-radius, 24px);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  isolation: isolate;
+}
+
+.tiltedCardFront {
+  /* Inherits card face */
+}
+
+.tiltedCardBack {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+
+.tiltedCardImg {
+  position: absolute;
+  display: block;
+  max-width: none;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.tiltedCardLayer {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(
+    calc(var(--tc-px, 0) * var(--tc-depth, 0) * 1px),
+    calc(var(--tc-py, 0) * var(--tc-depth, 0) * 1px),
+    0
+  );
+}
+
+.tiltedCardGlare {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: radial-gradient(
+    farthest-corner circle at var(--tc-gx, 50%) var(--tc-gy, 50%),
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.35)) 0%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.33)) 9%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.28)) 18%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.20)) 27%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.10)) 36%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.03)) 45%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), 0) 60%
+  );
+  mix-blend-mode: screen;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.tiltedCardRim {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 1px var(--tc-rim-color, rgba(255, 255, 255, 0.12)),
+    inset 0 1px 0 var(--tc-rim-light, rgba(255, 255, 255, 0.2));
+  pointer-events: none;
+}
+
+.tiltedCardEdge {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  box-sizing: border-box;
+  padding: 1px;
+  border-radius: inherit;
+  background: radial-gradient(
+    farthest-side circle at var(--tc-gx, 50%) var(--tc-gy, 50%),
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.85)) 0%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.71)) 18%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.43)) 36%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), calc(var(--tc-glare, 0) * 0.16)) 54%,
+    rgba(var(--tc-glare-rgb, 255, 255, 255), 0) 85%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+.tiltedCard:focus-visible .tiltedCardRim {
+  box-shadow:
+    inset 0 0 0 2px rgba(229, 28, 35, 0.8),
+    inset 0 0 0 3px rgba(0, 0, 0, 0.5);
+}
+
+.tiltedCardOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  transform: translateZ(var(--tc-lift, 30px));
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  pointer-events: auto;
+}
+
+.tiltedCardCaption {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 8;
+  margin: 16px 0 0 14px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: 0 0;
+  will-change: transform, opacity;
+  backdrop-filter: blur(8px);
+}

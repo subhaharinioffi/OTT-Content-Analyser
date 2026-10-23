@@ -20,6 +20,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from 'lucide-react';
+import TiltedCard from '@/components/TiltedCard';
 import styles from './dashboard.module.css';
 
 export default function DashboardPage() {
@@ -90,63 +91,79 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className={styles.dashboardContainer}>
-      {/* Landing Hero with Logo Animation & Clean Minimalist Interface */}
-      <section className={styles.heroSection}>
-        <div className={styles.heroLeft}>
-          <div className={styles.brandBadge}>
-            <div className={styles.pulseDot} />
-            <span>SHORTFUNDLY CENSORAI • REGULATORY INTELLIGENCE</span>
-          </div>
+    <div className={styles.dashboardWrapper}>
+      {/* Cinematic OTT Movie Posters Mosaic Background */}
+      <div className={styles.dashboardBgBackdrop} aria-hidden="true" />
 
-          <h1 className={styles.heroTitle}>
-            Next-Gen <span className={styles.redHighlight}>OTT Censorship</span> & Compliance
-          </h1>
+      <div className={styles.dashboardContainer}>
+        {/* Landing Hero with React Bits <TiltedCard /> 3D Perspective Interaction */}
+        <TiltedCard
+          containerWidth="100%"
+          containerHeight="auto"
+          scaleOnHover={1.018}
+          rotateAmplitude={8}
+          radius={24}
+          glare={0.4}
+          glareColor="#E51C23"
+          shadow={0.5}
+          className={styles.heroTiltedCardWrapper}
+        >
+          <section className={styles.heroSection}>
+            <div className={styles.heroLeft}>
+              <div className={styles.brandBadge}>
+                <div className={styles.pulseDot} />
+                <span>SHORTFUNDLY CENSORAI • REGULATORY INTELLIGENCE</span>
+              </div>
 
-          <p className={styles.heroSubtitle}>
-            Autonomous multimodal AI evaluation for films, series, songs, and vertical reels under the CBFC Section 5B and Digital Media Ethics Code (2021).
-          </p>
+              <h1 className={styles.heroTitle}>
+                Next-Gen <span className={styles.redHighlight}>OTT Censorship</span> &amp; Compliance
+              </h1>
 
-          <div className={styles.heroActions}>
-            <Link href="/submit" className={styles.primaryUploadBtn}>
-              <UploadCloud size={18} />
-              <span>Submit Media for Censor Review</span>
-              <ArrowRight size={16} />
-            </Link>
-            <button
-              onClick={fetchReports}
-              className={styles.refreshBtn}
-              title="Refresh telemetry"
-            >
-              <RefreshCw size={15} className={loading ? styles.spinning : ''} />
-              <span>Sync Status</span>
-            </button>
-          </div>
-        </div>
+              <p className={styles.heroSubtitle}>
+                Autonomous multimodal AI evaluation for films, series, songs, and vertical reels under the CBFC Section 5B and Digital Media Ethics Code (2021).
+              </p>
 
-        {/* Animated Shortfundly Logo Showcase */}
-        <div className={styles.heroRight}>
-          <div className={styles.logoStage}>
-            <div className={styles.orbitRing} />
-            <div className={styles.orbitRingOuter} />
-            <div className={styles.logoGlowOrb} />
-            <div className={styles.logoCircleWrapper}>
-              <Image
-                src="/logo.png"
-                alt="Shortfundly Circle Logo"
-                width={110}
-                height={110}
-                priority
-                className={styles.animatedLogoImg}
-              />
+              <div className={styles.heroActions}>
+                <Link href="/submit" className={styles.primaryUploadBtn}>
+                  <UploadCloud size={18} />
+                  <span>Submit Media for Censor Review</span>
+                  <ArrowRight size={16} />
+                </Link>
+                <button
+                  onClick={fetchReports}
+                  className={styles.refreshBtn}
+                  title="Refresh telemetry"
+                >
+                  <RefreshCw size={15} className={loading ? styles.spinning : ''} />
+                  <span>Sync Status</span>
+                </button>
+              </div>
             </div>
-            <div className={styles.stageTag}>
-              <ShieldCheck size={14} />
-              <span>AI Censor Engine Active</span>
+
+            {/* Animated Shortfundly Logo Showcase */}
+            <div className={styles.heroRight}>
+              <div className={styles.logoStage}>
+                <div className={styles.orbitRing} />
+                <div className={styles.orbitRingOuter} />
+                <div className={styles.logoGlowOrb} />
+                <div className={styles.logoCircleWrapper}>
+                  <Image
+                    src="/logo.png"
+                    alt="Shortfundly Circle Logo"
+                    width={110}
+                    height={110}
+                    priority
+                    className={styles.animatedLogoImg}
+                  />
+                </div>
+                <div className={styles.stageTag}>
+                  <ShieldCheck size={14} />
+                  <span>AI Censor Engine Active</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </section>
+          </section>
+        </TiltedCard>
 
       {/* Telemetry Precision Cards */}
       <section className={styles.telemetryGrid}>
@@ -368,5 +385,6 @@ export default function DashboardPage() {
         )}
       </section>
     </div>
+  </div>
   );
 }
