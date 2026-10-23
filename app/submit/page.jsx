@@ -13,12 +13,15 @@ import {
   Smartphone,
   CheckCircle,
   AlertCircle,
+  AlertTriangle,
   Sparkles,
   ArrowRight,
   ShieldCheck,
   FileVideo,
   Play,
   RotateCcw,
+  X,
+  FileQuestion,
 } from 'lucide-react';
 import styles from './submit.module.css';
 
@@ -56,6 +59,20 @@ export default function SubmitPage() {
   const [currentStage, setCurrentStage] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Warning Popup Modal state for incompatible file uploads
+  const [warningModal, setWarningModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    fileName: '',
+    fileSize: '',
+    selectedCategory: '',
+    detectedType: '',
+    requiredType: '',
+    suggestedCategory: '',
+    pendingFile: null,
+  });
+
   // Handle file selection and aspect ratio auto-detection
   const handleFileChange = (e) => {
     const selected = e.target.files?.[0];
@@ -63,7 +80,85 @@ export default function SubmitPage() {
     processSelectedFile(selected);
   };
 
-  const processSelectedFile = (selected) => {
+  const processSelectedFile = (selected, targetCategory = contentType) => {
+    if (!selected) return;
+
+    const fileName = selected.name || 'unnamed_file';
+    const fileType = selected.type || '';
+    const lowerName = fileName.toLowerCase();
+
+    // Comprehensive extension and MIME check
+    const isImage =
+      fileType.startsWith('image/') ||
+      /\.(jpe?g|png|webp|gif|bmp|svg|tiff|avif)$/i.test(lowerName);
+
+    const isVideo =
+      fileType.startsWith('video/') ||
+      /\.(mp4|mov|webm|mkv|avi|m4v|flv|wmv)$/i.test(lowerName);
+
+    const isAudio =
+      fileType.startsWith('audio/') ||
+      /\.(mp3|wav|ogg|aac|flac|m4a|wma)$/i.test(lowerName);
+
+    const isVideoCategory = ['Movie', 'Short Film', 'Short Video (Reels)'].includes(targetCategory);
+    const isPosterCategory = targetCategory === 'Poster (img)';
+    const isSongCategory = targetCategory === 'Song';
+
+    // 1. Critical Rule: Image uploaded when Video Source is selected -> REJECT and show warning popup
+    if (isVideoCategory && isImage) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setWarningModal({
+        isOpen: true,
+        title: 'Image File Not Accepted for Video Source',
+        message: `You selected "${targetCategory}" (Video Source), but attempted to upload an image file ("${fileName}"). Video regulatory screening requires video files (.MP4, .MOV, .WEBM).`,
+        fileName,
+        fileSize: (selected.size / 1024 / 1024).toFixed(2),
+        selectedCategory: targetCategory,
+        detectedType: `Image (${fileType || 'JPEG/PNG'})`,
+        requiredType: 'Video Format (.mp4, .mov, .webm)',
+        suggestedCategory: 'Poster (img)',
+        pendingFile: selected,
+      });
+      return;
+    }
+
+    // 2. Video uploaded when Poster is selected -> REJECT and show warning popup
+    if (isPosterCategory && isVideo) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setWarningModal({
+        isOpen: true,
+        title: 'Video File Not Accepted for Poster',
+        message: `You selected "Poster (img)", but uploaded a video file ("${fileName}"). Poster regulatory screening requires static key visual images (.PNG, .JPG, .WEBP).`,
+        fileName,
+        fileSize: (selected.size / 1024 / 1024).toFixed(2),
+        selectedCategory: targetCategory,
+        detectedType: `Video (${fileType || 'MP4/MOV'})`,
+        requiredType: 'Image Format (.png, .jpg, .webp)',
+        suggestedCategory: 'Movie',
+        pendingFile: selected,
+      });
+      return;
+    }
+
+    // 3. Image uploaded when Song is selected -> REJECT and show warning popup
+    if (isSongCategory && isImage) {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      setWarningModal({
+        isOpen: true,
+        title: 'Image File Not Accepted for Audio Track',
+        message: `You selected "Song", but uploaded an image file ("${fileName}"). Song regulatory screening requires master audio (.MP3, .WAV) or a music video.`,
+        fileName,
+        fileSize: (selected.size / 1024 / 1024).toFixed(2),
+        selectedCategory: targetCategory,
+        detectedType: `Image (${fileType || 'JPEG/PNG'})`,
+        requiredType: 'Audio (.mp3, .wav) or Music Video',
+        suggestedCategory: 'Poster (img)',
+        pendingFile: selected,
+      });
+      return;
+    }
+
+    // File passed validation -> Accept and generate preview
     setFile(selected);
     setErrorMessage('');
 
@@ -71,7 +166,7 @@ export default function SubmitPage() {
     setFilePreview(previewUrl);
 
     // Auto-detect aspect ratio for images
-    if (selected.type.startsWith('image/')) {
+    if (isImage) {
       const img = new window.Image();
       img.onload = () => {
         const ratio = img.width / img.height;
@@ -87,7 +182,7 @@ export default function SubmitPage() {
     }
 
     // Auto-detect aspect ratio and duration for video
-    if (selected.type.startsWith('video/')) {
+    if (isVideo) {
       const video = document.createElement('video');
       video.preload = 'metadata';
       video.onloadedmetadata = () => {
@@ -96,7 +191,7 @@ export default function SubmitPage() {
         if (ratio < 0.8) {
           setAspectRatio('9:16');
           setDetectedRatio(`9:16 (${video.videoWidth}x${video.videoHeight})`);
-          if (contentType !== 'Short Video (Reels)') {
+          if (targetCategory !== 'Short Video (Reels)') {
             setContentType('Short Video (Reels)');
           }
         } else {
@@ -105,6 +200,32 @@ export default function SubmitPage() {
         }
       };
       video.src = previewUrl;
+    }
+  };
+
+  const handleSwitchCategoryAndApply = () => {
+    if (!warningModal.pendingFile) return;
+    const target = warningModal.suggestedCategory;
+    setContentType(target);
+    const pending = warningModal.pendingFile;
+    setWarningModal((prev) => ({ ...prev, isOpen: false, pendingFile: null }));
+    processSelectedFile(pending, target);
+  };
+
+  const handleSelectAlternativeFile = () => {
+    setWarningModal((prev) => ({ ...prev, isOpen: false, pendingFile: null }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      setTimeout(() => {
+        fileInputRef.current?.click();
+      }, 100);
+    }
+  };
+
+  const handleCloseWarning = () => {
+    setWarningModal((prev) => ({ ...prev, isOpen: false, pendingFile: null }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -125,6 +246,53 @@ export default function SubmitPage() {
     if (!detectedRatio) {
       setAspectRatio(type.defaultAspect);
     }
+    // If a file is already loaded, validate compatibility with new selection
+    if (file) {
+      const fileName = file.name || '';
+      const fileType = file.type || '';
+      const lowerName = fileName.toLowerCase();
+      const isImg =
+        fileType.startsWith('image/') ||
+        /\.(jpe?g|png|webp|gif|bmp|svg|tiff)$/i.test(lowerName);
+      const isVid =
+        fileType.startsWith('video/') ||
+        /\.(mp4|mov|webm|mkv|avi|m4v)$/i.test(lowerName);
+      const isVideoCategory = ['Movie', 'Short Film', 'Short Video (Reels)'].includes(type.id);
+
+      if (isVideoCategory && isImg) {
+        setWarningModal({
+          isOpen: true,
+          title: 'Image Incompatible with ' + type.label,
+          message: `You selected "${type.label}" (Video Source), but your selected media is an image ("${fileName}"). Video regulatory screening requires video files (.MP4, .MOV, .WEBM).`,
+          fileName,
+          fileSize: (file.size / 1024 / 1024).toFixed(2),
+          selectedCategory: type.id,
+          detectedType: `Image (${fileType || 'JPEG/PNG'})`,
+          requiredType: 'Video Format (.mp4, .mov, .webm)',
+          suggestedCategory: 'Poster (img)',
+          pendingFile: file,
+        });
+        setFile(null);
+        setFilePreview(null);
+        setDetectedRatio(null);
+      } else if (type.id === 'Poster (img)' && isVid) {
+        setWarningModal({
+          isOpen: true,
+          title: 'Video Incompatible with Poster Format',
+          message: `You selected "Poster (img)", but your selected media is a video file ("${fileName}"). Poster regulatory screening requires static key visual images (.PNG, .JPG).`,
+          fileName,
+          fileSize: (file.size / 1024 / 1024).toFixed(2),
+          selectedCategory: type.id,
+          detectedType: `Video (${fileType || 'MP4/MOV'})`,
+          requiredType: 'Image Format (.png, .jpg, .webp)',
+          suggestedCategory: 'Movie',
+          pendingFile: file,
+        });
+        setFile(null);
+        setFilePreview(null);
+        setDetectedRatio(null);
+      }
+    }
   };
 
   const handleLoadDemoPoster = async (isVertical = false) => {
@@ -141,7 +309,7 @@ export default function SubmitPage() {
           ? 'Vertical 9:16 mobile promotional one-sheet for neo-noir thriller series. Features urban street aesthetic, neon gradient lighting, and statutory age advisory block.'
           : 'Official 16:9 widescreen cinema teaser poster. High atmospheric contrast, silhouetted protagonist, and international festival award laurels.'
       );
-      processSelectedFile(demoFile);
+      processSelectedFile(demoFile, 'Poster (img)');
     } catch (err) {
       console.error('Failed to load demo poster:', err);
     }
@@ -208,9 +376,91 @@ export default function SubmitPage() {
 
   return (
     <div className={styles.submitContainer}>
+      {/* Warning Popup Modal for Incompatible File Formats */}
+      {warningModal.isOpen && (
+        <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+          <div className={styles.modalBackdrop} onClick={handleCloseWarning} />
+          <div className={styles.warningModalCard}>
+            <button
+              type="button"
+              className={styles.modalCloseBtn}
+              onClick={handleCloseWarning}
+              aria-label="Close Warning"
+            >
+              <X size={20} />
+            </button>
+
+            <div className={styles.modalHeader}>
+              <div className={styles.warningIconWrapper}>
+                <AlertTriangle size={32} />
+              </div>
+              <div className={styles.modalHeaderText}>
+                <span className={styles.modalBadge}>FORMAT VALIDATION ALERT</span>
+                <h3 className={styles.modalTitle}>{warningModal.title}</h3>
+              </div>
+            </div>
+
+            <p className={styles.modalMessage}>{warningModal.message}</p>
+
+            {/* Diagnostic File Details Box */}
+            <div className={styles.mismatchDetailsCard}>
+              <div className={styles.detailRow}>
+                <span className={styles.detailKey}>Selected Category:</span>
+                <span className={styles.detailValSelected}>{warningModal.selectedCategory}</span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.detailKey}>Uploaded File:</span>
+                <span className={styles.detailValFile}>
+                  {warningModal.fileName} ({warningModal.fileSize} MB)
+                </span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.detailKey}>Detected Format:</span>
+                <span className={styles.detailValDetected}>{warningModal.detectedType}</span>
+              </div>
+              <div className={styles.detailRow}>
+                <span className={styles.detailKey}>Accepted Format:</span>
+                <span className={styles.detailValRequired}>{warningModal.requiredType}</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className={styles.modalActionButtons}>
+              {warningModal.suggestedCategory && (
+                <button
+                  type="button"
+                  onClick={handleSwitchCategoryAndApply}
+                  className={styles.modalPrimaryActionBtn}
+                >
+                  <Sparkles size={16} />
+                  <span>Switch to &quot;{warningModal.suggestedCategory}&quot; &amp; Keep File</span>
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={handleSelectAlternativeFile}
+                className={styles.modalSecondaryActionBtn}
+              >
+                <Video size={16} />
+                <span>Select Valid Video File</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCloseWarning}
+                className={styles.modalCancelBtn}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={styles.headerArea}>
         <div className={styles.breadcrumb}>
-          <span>Compliance Studio</span>
+          <span>Shortfundly CensorAI</span>
           <span>/</span>
           <span className={styles.activeBreadcrumb}>New Asset Submission</span>
         </div>

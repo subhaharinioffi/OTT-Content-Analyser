@@ -4,9 +4,9 @@ import { AuthProvider } from '@/components/AuthProvider';
 import Navbar from '@/components/Navbar';
 
 export const metadata = {
-  title: 'CineComply AI | OTT Guidelines & Regulatory Compliance Platform',
+  title: 'Shortfundly CensorAI | OTT Regulatory Compliance & Content Guidelines',
   description:
-    'Multimodal AI regulatory compliance engine for OTT films, series, songs, and vertical reels under CBFC and Digital Media Ethics Code.',
+    'Multimodal AI regulatory compliance and censorship analysis platform for OTT films, series, songs, and vertical reels under CBFC and Digital Media Ethics Code.',
   icons: {
     icon: '/logo.png',
   },

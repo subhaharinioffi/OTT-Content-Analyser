@@ -68,7 +68,7 @@ export default function RegisterPage() {
           <div className={styles.logoCircle}>
             <Image
               src="/logo.png"
-              alt="CineComply Logo"
+              alt="Shortfundly Logo"
               width={54}
               height={54}
               priority
@@ -76,7 +76,7 @@ export default function RegisterPage() {
             />
           </div>
           <h1 className={styles.title}>
-            Join <span className={styles.redHighlight}>CineComply</span>
+            Join <span className={styles.redHighlight}>Shortfundly CensorAI</span>
           </h1>
           <p className={styles.subtitle}>
             Register your studio credentials for automated OTT regulatory clearance

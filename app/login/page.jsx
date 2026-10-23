@@ -74,7 +74,7 @@ export default function LoginPage() {
           <div className={styles.logoCircle}>
             <Image
               src="/logo.png"
-              alt="CineComply Logo"
+              alt="Shortfundly Logo"
               width={54}
               height={54}
               priority
@@ -82,7 +82,7 @@ export default function LoginPage() {
             />
           </div>
           <h1 className={styles.title}>
-            CINE<span className={styles.redHighlight}>COMPLY</span> AI
+            SHORTFUNDLY <span className={styles.redHighlight}>CensorAI</span>
           </h1>
           <p className={styles.subtitle}>
             OTT Regulatory & Content Compliance Authentication Gateway

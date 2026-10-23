@@ -12,13 +12,13 @@ import {
   ArrowRight,
   Clock,
   Sparkles,
-  ExternalLink,
   Film,
   Video,
   Music,
   Image as ImageIcon,
   Smartphone,
   RefreshCw,
+  ShieldCheck,
 } from 'lucide-react';
 import styles from './dashboard.module.css';
 
@@ -91,50 +91,59 @@ export default function DashboardPage() {
 
   return (
     <div className={styles.dashboardContainer}>
-      {/* Studio Banner / Hero */}
+      {/* Landing Hero with Logo Animation & Clean Minimalist Interface */}
       <section className={styles.heroSection}>
-        <div className={styles.heroContent}>
+        <div className={styles.heroLeft}>
           <div className={styles.brandBadge}>
-            <Image
-              src="/logo.png"
-              alt="Logo"
-              width={26}
-              height={26}
-              className={styles.heroLogo}
-            />
-            <span>Next-Gen Cinema & OTT Regulatory Intelligence</span>
+            <div className={styles.pulseDot} />
+            <span>SHORTFUNDLY CENSORAI • REGULATORY INTELLIGENCE</span>
           </div>
+
           <h1 className={styles.heroTitle}>
-            Multimodal <span className={styles.redHighlight}>AI Compliance</span> & Certification
+            Next-Gen <span className={styles.redHighlight}>OTT Censorship</span> & Compliance
           </h1>
+
           <p className={styles.heroSubtitle}>
-            Autonomous regulatory screening for OTT films, series, songs, and vertical reels under the Digital Media Ethics Code (2021) and CBFC guidelines.
+            Autonomous multimodal AI evaluation for films, series, songs, and vertical reels under the CBFC Section 5B and Digital Media Ethics Code (2021).
           </p>
+
           <div className={styles.heroActions}>
             <Link href="/submit" className={styles.primaryUploadBtn}>
               <UploadCloud size={18} />
-              <span>Launch Upload Studio</span>
+              <span>Submit Media for Censor Review</span>
+              <ArrowRight size={16} />
             </Link>
-            <button onClick={fetchReports} className={styles.refreshBtn} title="Refresh telemetry">
-              <RefreshCw size={16} className={loading ? styles.spinning : ''} />
-              <span>Sync Telemetry</span>
+            <button
+              onClick={fetchReports}
+              className={styles.refreshBtn}
+              title="Refresh telemetry"
+            >
+              <RefreshCw size={15} className={loading ? styles.spinning : ''} />
+              <span>Sync Status</span>
             </button>
           </div>
         </div>
 
-        {/* Studio Live Badge */}
-        <div className={styles.studioStatusCard}>
-          <div className={styles.statusHeader}>
-            <div className={styles.pulseDot} />
-            <span className={styles.statusTitle}>REGULATORY ENGINE LIVE</span>
-          </div>
-          <p className={styles.statusDesc}>
-            Gemini 3.5 Multimodal • Cloudinary Media CDN • MongoDB Atlas
-          </p>
-          <div className={styles.statusRules}>
-            <span className={styles.rulePill}>CBFC Sec 5B</span>
-            <span className={styles.rulePill}>IT Rules 2021</span>
-            <span className={styles.rulePill}>BBFC / MPAA</span>
+        {/* Animated Shortfundly Logo Showcase */}
+        <div className={styles.heroRight}>
+          <div className={styles.logoStage}>
+            <div className={styles.orbitRing} />
+            <div className={styles.orbitRingOuter} />
+            <div className={styles.logoGlowOrb} />
+            <div className={styles.logoCircleWrapper}>
+              <Image
+                src="/logo.png"
+                alt="Shortfundly Circle Logo"
+                width={110}
+                height={110}
+                priority
+                className={styles.animatedLogoImg}
+              />
+            </div>
+            <div className={styles.stageTag}>
+              <ShieldCheck size={14} />
+              <span>AI Censor Engine Active</span>
+            </div>
           </div>
         </div>
       </section>
@@ -142,62 +151,74 @@ export default function DashboardPage() {
       {/* Telemetry Precision Cards */}
       <section className={styles.telemetryGrid}>
         <div className={styles.telemetryCard}>
-          <div className={styles.telemetryIconWrapper} style={{ background: 'rgba(56, 189, 248, 0.12)', color: '#38BDF8' }}>
+          <div
+            className={styles.telemetryIconWrapper}
+            style={{ background: 'rgba(56, 189, 248, 0.12)', color: '#38BDF8' }}
+          >
             <Layers size={22} />
           </div>
           <div className={styles.telemetryInfo}>
-            <span className={styles.telemetryLabel}>Total Submissions</span>
+            <span className={styles.telemetryLabel}>Total Audits</span>
             <span className={styles.telemetryValue}>{telemetry.totalSubmissions}</span>
           </div>
-          <div className={styles.telemetrySubtext}>All media types recorded</div>
+          <div className={styles.telemetrySubtext}>Real media records processed</div>
         </div>
 
         <div className={styles.telemetryCard}>
-          <div className={styles.telemetryIconWrapper} style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10B981' }}>
+          <div
+            className={styles.telemetryIconWrapper}
+            style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10B981' }}
+          >
             <FileCheck2 size={22} />
           </div>
           <div className={styles.telemetryInfo}>
             <span className={styles.telemetryLabel}>Clearance Rate</span>
             <span className={styles.telemetryValue}>{telemetry.clearanceRate}%</span>
           </div>
-          <div className={styles.telemetrySubtext}>Approved or conditional</div>
+          <div className={styles.telemetrySubtext}>Passed statutory threshold</div>
         </div>
 
         <div className={styles.telemetryCard}>
-          <div className={styles.telemetryIconWrapper} style={{ background: 'rgba(225, 29, 72, 0.12)', color: '#E11D48' }}>
+          <div
+            className={styles.telemetryIconWrapper}
+            style={{ background: 'rgba(225, 29, 72, 0.12)', color: '#E11D48' }}
+          >
             <AlertTriangle size={22} />
           </div>
           <div className={styles.telemetryInfo}>
-            <span className={styles.telemetryLabel}>High Risk Flags</span>
+            <span className={styles.telemetryLabel}>Flagged Incidents</span>
             <span className={styles.telemetryValue}>{telemetry.highRiskCount}</span>
           </div>
-          <div className={styles.telemetrySubtext}>Requiring editorial cuts</div>
+          <div className={styles.telemetrySubtext}>Requiring editorial remediation</div>
         </div>
 
         <div className={styles.telemetryCard}>
-          <div className={styles.telemetryIconWrapper} style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#F59E0B' }}>
+          <div
+            className={styles.telemetryIconWrapper}
+            style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#F59E0B' }}
+          >
             <Activity size={22} />
           </div>
           <div className={styles.telemetryInfo}>
-            <span className={styles.telemetryLabel}>Avg Regulatory Friction</span>
+            <span className={styles.telemetryLabel}>Mean Release Friction</span>
             <span className={styles.telemetryValue}>{telemetry.avgRiskScore}%</span>
           </div>
-          <div className={styles.telemetrySubtext}>Mean compliance risk score</div>
+          <div className={styles.telemetrySubtext}>Average regulatory risk score</div>
         </div>
       </section>
 
-      {/* Submissions Section */}
+      {/* Production-Ready Regulatory Audit Queue */}
       <section className={styles.submissionsSection}>
         <div className={styles.sectionHeader}>
           <div>
             <h2 className={styles.sectionTitle}>Regulatory Audit Queue</h2>
             <p className={styles.sectionDesc}>
-              Real-time compliance reports generated by Gemini and stored in MongoDB Atlas
+              Real-time censorship and compliance records stored in MongoDB Atlas
             </p>
           </div>
           <Link href="/submit" className={styles.quickUploadLink}>
             <UploadCloud size={16} />
-            <span>Submit Asset</span>
+            <span>Submit Media</span>
           </Link>
         </div>
 
@@ -209,15 +230,15 @@ export default function DashboardPage() {
         ) : reports.length === 0 ? (
           <div className={styles.emptyState}>
             <div className={styles.emptyIconCircle}>
-              <Film size={36} />
+              <Film size={34} />
             </div>
             <h3 className={styles.emptyTitle}>No Submissions In Queue</h3>
             <p className={styles.emptyText}>
-              Upload a movie, short film, reel, song, or poster to trigger real-time AI regulatory screening.
+              Your regulatory audit queue is currently clean. Upload a movie, short film, vertical reel, song, or poster to begin real-time AI compliance screening.
             </p>
             <Link href="/submit" className={styles.emptyUploadBtn}>
               <UploadCloud size={18} />
-              <span>Submit Media Asset Now</span>
+              <span>Submit Your First Asset</span>
             </Link>
           </div>
         ) : (
@@ -243,7 +264,8 @@ export default function DashboardPage() {
                       <tr key={id} className={styles.tableRow}>
                         <td className={styles.assetCell}>
                           <div className={styles.assetThumb}>
-                            {report.contentType?.includes('Poster') || report.mediaUrl?.match(/\.(jpeg|jpg|png|webp)/i) ? (
+                            {report.contentType?.includes('Poster') ||
+                            report.mediaUrl?.match(/\.(jpeg|jpg|png|webp)/i) ? (
                               <img
                                 src={report.mediaUrl}
                                 alt={report.title}
@@ -258,7 +280,8 @@ export default function DashboardPage() {
                           <div className={styles.assetMeta}>
                             <span className={styles.assetTitle}>{report.title}</span>
                             <span className={styles.assetAspect}>
-                              {report.aspectRatio} • {report.duration ? `${report.duration}s` : 'Visual Asset'}
+                              {report.aspectRatio} •{' '}
+                              {report.duration ? `${report.duration}s` : 'Visual Asset'}
                             </span>
                           </div>
                         </td>
@@ -271,7 +294,11 @@ export default function DashboardPage() {
                         </td>
 
                         <td>
-                          <span className={`${styles.ageBadge} ${getAgeBadgeClass(report.ageClassification)}`}>
+                          <span
+                            className={`${styles.ageBadge} ${getAgeBadgeClass(
+                              report.ageClassification
+                            )}`}
+                          >
                             {report.ageClassification}
                           </span>
                         </td>

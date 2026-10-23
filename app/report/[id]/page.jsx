@@ -126,13 +126,13 @@ export default function ReportPage() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('CINECOMPLY AI • REGULATORY COMPLIANCE CERTIFICATE', 14, 16);
+    doc.text('SHORTFUNDLY CENSORAI • REGULATORY COMPLIANCE CERTIFICATE', 14, 16);
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(180, 190, 205);
     doc.text('Official OTT Platform Content Guidelines & Regulatory Review Assessment', 14, 24);
-    doc.text(`Certificate No: CC-${report._id?.slice(-8).toUpperCase()} | Issue Date: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Certificate No: SFC-${report._id?.slice(-8).toUpperCase()} | Issue Date: ${new Date().toLocaleDateString()}`, 14, 30);
 
     // Section 1: Executive Metadata & Age Rating
     doc.setTextColor(15, 23, 42);
@@ -222,11 +222,11 @@ export default function ReportPage() {
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(100, 116, 139);
       doc.text('This digital certificate has been algorithmically validated and registered under Ministry of I&B Digital Ethics Code.', 14, finalY);
-      doc.text('Authorized Regulatory Signatory: CineComply AI Autonomous Audit Officer', 14, finalY + 5);
+      doc.text('Authorized Regulatory Signatory: Shortfundly CensorAI Autonomous Audit Officer', 14, finalY + 5);
     }
 
     // Save PDF
-    doc.save(`CineComply_Certificate_${report.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+    doc.save(`Shortfundly_CensorAI_Certificate_${report.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
   };
 
   if (loading) {

@@ -22,7 +22,7 @@ export default function Navbar() {
           <div className={styles.logoWrapper}>
             <Image
               src="/logo.png"
-              alt="OTT Compliance Logo"
+              alt="Shortfundly Logo"
               width={34}
               height={34}
               priority
@@ -31,9 +31,9 @@ export default function Navbar() {
           </div>
           <div className={styles.brandText}>
             <span className={styles.brandTitle}>
-              CINE<span className={styles.brandRed}>COMPLY</span>
+              SHORTFUNDLY <span className={styles.brandRed}>CensorAI</span>
             </span>
-            <span className={styles.brandSubtitle}>OTT REGULATORY AI</span>
+            <span className={styles.brandSubtitle}>OTT COMPLIANCE SUITE</span>
           </div>
         </Link>
 
