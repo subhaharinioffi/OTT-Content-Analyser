@@ -570,44 +570,12 @@ export default function SubmitPage() {
               </div>
             </MagicBentoCard>
 
-            {/* Step 3.2: Aspect Ratio & Metadata */}
             
-            {/* Step 2: Target Rating Goal (Optional) */}
-            <MagicBentoCard className={styles.formCard} glowColor="#10B981" enableStars={true} enableTilt={false}>
-              <div className={styles.cardHeaderWithBadge}>
-                <label className={styles.cardHeaderLabel}>
-                  2. Target Rating Goal <span className={styles.optionalBadge}>(Optional)</span>
-                </label>
-                <span className={styles.activeTargetPill}>
-                  Goal: {targetRatingGoal.split(' ')[0]}
-                </span>
-              </div>
-              <p className={styles.ratingHelpText}>
-                Tailors Gemini 2.5 Flash remediation suggestions to specific cuts/bleeps needed to qualify for your desired distribution certificate.
-              </p>
-              <div className={styles.targetRatingGrid}>
-                {TARGET_RATINGS.map((tr) => {
-                  const isSelected = targetRatingGoal === tr.id;
-                  return (
-                    <button
-                      key={tr.id}
-                      type="button"
-                      onClick={() => setTargetRatingGoal(tr.id)}
-                      className={`${styles.ratingOption} ${isSelected ? styles.ratingSelected : ''}`}
-                    >
-                      <div className={styles.ratingTopRow}>
-                        <span className={styles.ratingBadgePill}>{tr.badge}</span>
-                        <span className={styles.ratingOptionLabel}>{tr.label}</span>
-                      </div>
-                      <span className={styles.ratingOptionDesc}>{tr.desc}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </MagicBentoCard>
+            
+            
 
             <MagicBentoCard className={styles.formCard} glowColor="#F59E0B" enableStars={true} enableTilt={false}>
-              <label className={styles.cardHeaderLabel}>3. Aspect Ratio & Orientation</label>
+              <label className={styles.cardHeaderLabel}>2. Aspect Ratio & Orientation</label>
               <div className={styles.aspectRatioRow}>
                 <button
                   type="button"
@@ -666,7 +634,7 @@ export default function SubmitPage() {
             <MagicBentoCard className={styles.formCard} glowColor="#38BDF8" enableStars={true} enableTilt={false}>
               <div className={styles.uploadHeaderRow}>
                 <label className={styles.cardHeaderLabel}>
-                  4. Media File Upload <span className={styles.requiredAsterisk}>*</span>
+                  3. Media File Upload <span className={styles.requiredAsterisk}>*</span>
                 </label>
                 
               </div>

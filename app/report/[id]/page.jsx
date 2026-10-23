@@ -313,29 +313,7 @@ export default function ReportPage() {
               <p className={styles.summaryText}>{report.executiveSummary || report.summary}</p>
 
               {/* Target Rating Goal Callout */}
-              <div className={styles.targetGoalBanner}>
-                <div className={styles.targetGoalIconBox}>
-                  <Target size={18} />
-                </div>
-                <div className={styles.targetGoalInfo}>
-                  <span className={styles.targetGoalTitle}>
-                    Target Age Rating Goal: <strong>{targetRatingGoal}</strong>
-                  </span>
-                  <span className={styles.targetGoalStatus}>
-                    {isTargetAchieved ? (
-                      <span className={styles.targetAchievedPill}>
-                        <CheckCircle size={13} />
-                        <span>Target Goal Achieved with current edit</span>
-                      </span>
-                    ) : (
-                      <span className={styles.targetPendingPill}>
-                        <AlertTriangle size={13} />
-                        <span>Remediation required to qualify for {targetRatingGoal.split(' ')[0]}</span>
-                      </span>
-                    )}
-                  </span>
-                </div>
-              </div>
+              
             </div>
 
             {/* Badges: Statutory Rating & Risk Friction */}
@@ -623,7 +601,7 @@ export default function ReportPage() {
                           <div className={styles.remediationHeader}>
                             <Wrench size={14} className={styles.wrenchIcon} />
                             <span className={styles.remediationTitle}>
-                              Actionable Edit for Target Rating: <strong>{targetRatingGoal.split(' ')[0]}</strong>
+                              Actionable Compliance Remediation
                             </span>
                             {issue.remediation?.editType && (
                               <span className={styles.editTypeBadge}>{issue.remediation.editType}</span>
