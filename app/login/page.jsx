@@ -52,31 +52,20 @@ export default function LoginPage() {
         }
         setLoading(false);
       } else {
-        // Safe relative navigation: always stay on current domain (prevents redirecting to localhost on Vercel)
+        // Successful login: Navigate directly to dashboard on current origin
         let destination = '/';
         if (typeof window !== 'undefined') {
           const params = new URLSearchParams(window.location.search);
           const callbackParam = params.get('callbackUrl');
-          if (callbackParam) {
-            try {
-              if (callbackParam.startsWith('/') && !callbackParam.startsWith('//')) {
-                destination = callbackParam;
-              } else {
-                const parsed = new URL(callbackParam);
-                if (parsed.origin === window.location.origin) {
-                  destination = parsed.pathname + parsed.search;
-                }
-              }
-            } catch (e) {
-              destination = '/';
-            }
+          if (callbackParam && callbackParam.startsWith('/') && !callbackParam.startsWith('//')) {
+            destination = callbackParam;
           }
         }
-        router.push(destination);
-        router.refresh();
+        window.location.href = destination;
       }
     } catch (err) {
-      setError('An unexpected authentication error occurred.');
+      console.error('[Login Error]', err);
+      setError(err?.message || 'An unexpected authentication error occurred.');
       setLoading(false);
     }
   };

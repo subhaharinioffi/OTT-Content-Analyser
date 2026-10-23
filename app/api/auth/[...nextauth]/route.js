@@ -94,18 +94,27 @@ export const authOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Relative paths are always safe to return directly
-      if (url.startsWith('/')) return url;
+      let activeBase = baseUrl;
+      if (
+        activeBase.includes('localhost') &&
+        (process.env.VERCEL || process.env.NODE_ENV === 'production')
+      ) {
+        activeBase = 'https://ott-content-analyser.vercel.app';
+      }
+
+      // NextAuth client new URL(data.url) requires an absolute URL string
+      if (url.startsWith('/')) {
+        return `${activeBase}${url}`;
+      }
+
       try {
         const parsed = new URL(url);
-        // Never redirect to localhost in production/Vercel
-        if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
-          return '/';
+        if (parsed.origin === activeBase) {
+          return url;
         }
-        return parsed.pathname + parsed.search;
-      } catch (e) {
-        return '/';
-      }
+      } catch (e) {}
+
+      return activeBase;
     },
   },
   pages: {
