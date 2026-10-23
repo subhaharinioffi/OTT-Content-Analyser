@@ -27,6 +27,16 @@ import styles from './submit.module.css';
 import CinemaVideoWallBg from '@/components/CinemaVideoWallBg';
 import MagicBentoCard from '@/components/MagicBentoCard';
 
+
+const TARGET_RATINGS = [
+  { id: 'Auto-Detect (Standard Assessment)', label: 'Auto-Detect (Standard Assessment)', badge: 'Default', desc: 'Holistic multi-descriptor rating classification based on raw media signals.' },
+  { id: 'U (Universal - All Ages)', label: 'U (Universal - All Ages)', badge: 'U', desc: 'Suitable for family & children; zero graphic violence, zero profanity, zero substance abuse.' },
+  { id: 'U/A 7+ (Parental Guidance for < 7 yrs)', label: 'U/A 7+ (Parental Guidance for < 7 yrs)', badge: 'U/A 7+', desc: 'Mild fantasy violence or comedic slapstick with parental advisory.' },
+  { id: 'U/A 13+ (Parental Guidance for < 13 yrs)', label: 'U/A 13+ (Parental Guidance for < 13 yrs)', badge: 'U/A 13+', desc: 'Moderate dramatic conflict, stylized action; bleeped/muted coarse language.' },
+  { id: 'U/A 16+ (Parental Guidance for < 16 yrs)', label: 'U/A 16+ (Parental Guidance for < 16 yrs)', badge: 'U/A 16+', desc: 'Mature themes, non-gratuitous violence, adult language with disclaimers.' },
+  { id: 'A (Restricted to Adults 18+)', label: 'A (Restricted to Adults 18+)', badge: 'A', desc: 'Adults only; strong violence, intense horror or unrestricted mature themes.' },
+];
+
 const CONTENT_TYPES = [
   { id: 'Poster (img)', label: 'Poster (img)', icon: ImageIcon, defaultAspect: '16:9', desc: 'High-res promotional one-sheet or key visual' },
   { id: 'Movie', label: 'Movie', icon: Film, defaultAspect: '16:9', desc: 'Full-length theatrical or streaming feature film' },
@@ -49,6 +59,7 @@ export default function SubmitPage() {
   const fileInputRef = useRef(null);
 
   const [contentType, setContentType] = useState('');
+  const [targetRatingGoal, setTargetRatingGoal] = useState('Auto-Detect (Standard Assessment)');
   const [aspectRatio, setAspectRatio] = useState('16:9');
   const [title, setTitle] = useState('');
   const [synopsis, setSynopsis] = useState('');
@@ -351,6 +362,7 @@ export default function SubmitPage() {
       formData.append('file', file);
       formData.append('title', title.trim());
       formData.append('contentType', contentType);
+      formData.append('targetRatingGoal', targetRatingGoal);
       formData.append('aspectRatio', aspectRatio);
       formData.append('duration', fileDuration.toString());
       formData.append('userEmail', session?.user?.email || 'creator@cinema.io');
@@ -559,8 +571,43 @@ export default function SubmitPage() {
             </MagicBentoCard>
 
             {/* Step 3.2: Aspect Ratio & Metadata */}
+            
+            {/* Step 2: Target Rating Goal (Optional) */}
+            <MagicBentoCard className={styles.formCard} glowColor="#10B981" enableStars={true} enableTilt={false}>
+              <div className={styles.cardHeaderWithBadge}>
+                <label className={styles.cardHeaderLabel}>
+                  2. Target Rating Goal <span className={styles.optionalBadge}>(Optional)</span>
+                </label>
+                <span className={styles.activeTargetPill}>
+                  Goal: {targetRatingGoal.split(' ')[0]}
+                </span>
+              </div>
+              <p className={styles.ratingHelpText}>
+                Tailors Gemini 2.5 Flash remediation suggestions to specific cuts/bleeps needed to qualify for your desired distribution certificate.
+              </p>
+              <div className={styles.targetRatingGrid}>
+                {TARGET_RATINGS.map((tr) => {
+                  const isSelected = targetRatingGoal === tr.id;
+                  return (
+                    <button
+                      key={tr.id}
+                      type="button"
+                      onClick={() => setTargetRatingGoal(tr.id)}
+                      className={`${styles.ratingOption} ${isSelected ? styles.ratingSelected : ''}`}
+                    >
+                      <div className={styles.ratingTopRow}>
+                        <span className={styles.ratingBadgePill}>{tr.badge}</span>
+                        <span className={styles.ratingOptionLabel}>{tr.label}</span>
+                      </div>
+                      <span className={styles.ratingOptionDesc}>{tr.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </MagicBentoCard>
+
             <MagicBentoCard className={styles.formCard} glowColor="#F59E0B" enableStars={true} enableTilt={false}>
-              <label className={styles.cardHeaderLabel}>2. Aspect Ratio & Orientation</label>
+              <label className={styles.cardHeaderLabel}>3. Aspect Ratio & Orientation</label>
               <div className={styles.aspectRatioRow}>
                 <button
                   type="button"
@@ -619,7 +666,7 @@ export default function SubmitPage() {
             <MagicBentoCard className={styles.formCard} glowColor="#38BDF8" enableStars={true} enableTilt={false}>
               <div className={styles.uploadHeaderRow}>
                 <label className={styles.cardHeaderLabel}>
-                  3. Media File Upload <span className={styles.requiredAsterisk}>*</span>
+                  4. Media File Upload <span className={styles.requiredAsterisk}>*</span>
                 </label>
                 
               </div>

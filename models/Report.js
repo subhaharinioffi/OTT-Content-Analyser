@@ -20,11 +20,25 @@ const ReportSchema = new mongoose.Schema(
     ageClassification: {
       type: String,
       required: true,
-      enum: ['U', 'U/A 7+', 'U/A 13+', 'U/A 16+', 'A', 'REJECTED'],
     },
+    assignedRating: { type: String },
+    targetRatingGoal: { type: String, default: 'Auto-Detect (Standard Assessment)' },
+    targetRatingAchieved: { type: Boolean, default: true },
+    complianceScore: { type: Number, default: 75 },
     riskScore: { type: Number, required: true, min: 0, max: 100 },
     status: { type: String, default: 'Approved' },
+    officialContentDescriptor: { type: String },
     summary: { type: String, required: true },
+    executiveSummary: { type: String },
+    themeMatrix: [
+      {
+        themeId: String,
+        themeName: String,
+        severity: String,
+        violationCount: Number,
+        summaryNote: String,
+      },
+    ],
     descriptors: {
       themes: { score: Number, severity: String, details: String },
       violence: { score: Number, severity: String, details: String },
@@ -34,6 +48,32 @@ const ReportSchema = new mongoose.Schema(
       substanceAbuse: { score: Number, severity: String, details: String },
       horror: { score: Number, severity: String, details: String },
     },
+    pinpointedIssues: [
+      {
+        id: String,
+        themeId: String,
+        themeName: String,
+        severity: String,
+        modality: String,
+        timestampStart: String,
+        timestampEnd: String,
+        timestampSeconds: Number,
+        boundingBox: {
+          ymin: Number,
+          xmin: Number,
+          ymax: Number,
+          xmax: Number,
+          regionLabel: String,
+        },
+        offendingSnippet: String,
+        problemDescription: String,
+        remediation: {
+          toAchieveTargetRating: String,
+          editType: String,
+          ratingImpactIfUnchanged: String,
+        },
+      },
+    ],
     violations: [
       {
         startTime: String,

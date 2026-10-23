@@ -14,6 +14,7 @@ export async function POST(request) {
     const contentType = formData.get('contentType') || 'Movie';
     const aspectRatio = formData.get('aspectRatio') || '16:9';
     const userEmail = formData.get('userEmail') || 'creator@cinema.io';
+    const targetRatingGoal = formData.get('targetRatingGoal') || 'Auto-Detect (Standard Assessment)';
     let duration = parseFloat(formData.get('duration') || '0');
 
     if (!file) {
@@ -27,7 +28,7 @@ export async function POST(request) {
     const buffer = Buffer.from(bytes);
     const mimeType = file.type || 'video/mp4';
 
-    console.log(`[Analyze API] Processing file "${title}", size: ${(buffer.length / 1024 / 1024).toFixed(2)} MB, mime: ${mimeType}`);
+    console.log(`[Analyze API] Processing file "${title}", size: ${(buffer.length / 1024 / 1024).toFixed(2)} MB, target: ${targetRatingGoal}`);
 
     // Step 1: Upload to Cloudinary
     let cloudinaryResult = null;
@@ -49,8 +50,8 @@ export async function POST(request) {
       duration = Math.round(cloudinaryResult.duration);
     }
 
-    // Step 2: Multi-modal AI Regulatory Analysis via Gemini
-    console.log('[Analyze API] Invoking Gemini Compliance Engine...');
+    // Step 2: Multi-modal AI Regulatory Analysis via Gemini 2.5 Flash API
+    console.log('[Analyze API] Invoking Gemini Compliance Engine with Target Rating Goal:', targetRatingGoal);
     const complianceAnalysis = await analyzeMediaCompliance({
       fileBuffer: buffer,
       mimeType: mimeType,
@@ -59,9 +60,10 @@ export async function POST(request) {
       aspectRatio: aspectRatio,
       duration: duration,
       cloudinaryUrl: cloudinaryResult.secure_url,
+      targetRatingGoal: targetRatingGoal,
     });
 
-    // Step 3: Persist Compliance Report in MongoDB Atlas
+    // Step 3: Persist Compliance Report in MongoDB Atlas & Cloud Storage
     console.log('[Analyze API] Persisting report to database...');
     const newReport = await ReportModel.create({
       title,
@@ -72,11 +74,19 @@ export async function POST(request) {
       fileSize: buffer.length,
       duration: duration,
       userEmail,
-      ageClassification: complianceAnalysis.ageClassification || 'U/A 13+',
-      riskScore: typeof complianceAnalysis.riskScore === 'number' ? complianceAnalysis.riskScore : 35,
+      ageClassification: complianceAnalysis.assignedRating || complianceAnalysis.ageClassification || 'U/A 13+',
+      assignedRating: complianceAnalysis.assignedRating || complianceAnalysis.ageClassification || 'U/A 13+',
+      targetRatingGoal: targetRatingGoal,
+      targetRatingAchieved: complianceAnalysis.targetRatingAchieved,
+      complianceScore: typeof complianceAnalysis.complianceScore === 'number' ? complianceAnalysis.complianceScore : 75,
+      riskScore: typeof complianceAnalysis.riskScore === 'number' ? complianceAnalysis.riskScore : 25,
       status: complianceAnalysis.status || 'Conditional Approval',
-      summary: complianceAnalysis.summary || 'Content analysis completed.',
+      officialContentDescriptor: complianceAnalysis.officialContentDescriptor,
+      summary: complianceAnalysis.executiveSummary || complianceAnalysis.summary,
+      executiveSummary: complianceAnalysis.executiveSummary || complianceAnalysis.summary,
+      themeMatrix: complianceAnalysis.themeMatrix || [],
       descriptors: complianceAnalysis.descriptors || {},
+      pinpointedIssues: complianceAnalysis.pinpointedIssues || [],
       violations: complianceAnalysis.violations || [],
       remediationSuggestions: complianceAnalysis.remediationSuggestions || [],
     });

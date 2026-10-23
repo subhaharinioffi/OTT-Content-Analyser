@@ -930,3 +930,105 @@
 .modalCancelBtn:hover {
   color: var(--text-primary);
 }
+
+/* Target Rating Goal Selector Styles */
+.cardHeaderWithBadge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.optionalBadge {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.activeTargetPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 9999px;
+  color: #10b981;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+}
+
+.ratingHelpText {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-top: -8px;
+}
+
+.targetRatingGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.ratingOption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  background: var(--card-elevated);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  text-align: left;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.ratingOption:hover {
+  border-color: #10b981;
+  background: var(--table-hover);
+}
+
+.ratingSelected {
+  border-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2) !important;
+}
+
+.ratingTopRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ratingBadgePill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.ratingSelected .ratingBadgePill {
+  background: #10b981;
+  color: #0b0d14;
+  border-color: #10b981;
+}
+
+.ratingOptionLabel {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ratingOptionDesc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
