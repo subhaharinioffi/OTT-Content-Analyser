@@ -1,4 +1,9 @@
 .reportWrapper {
+  --sev-critical: #ef4444;
+  --sev-high: #ef4444;
+  --sev-moderate: #f59e0b;
+  --sev-low: #3b82f6;
+  --sev-resolved: #10b981;
   position: relative;
   width: 100%;
   min-height: calc(100vh - 72px);
@@ -56,6 +61,7 @@
   box-shadow: 0 4px 14px var(--accent-primary-glow);
   transition: all 0.2s ease;
   cursor: pointer;
+  border: none;
 }
 
 .exportPdfBtn:hover {
@@ -136,68 +142,6 @@
   color: var(--text-secondary);
   line-height: 1.55;
   max-width: 720px;
-}
-
-/* Target Goal Callout */
-.targetGoalBanner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  margin-top: 6px;
-}
-
-[data-theme='light'] .targetGoalBanner {
-  background: rgba(0, 0, 0, 0.03);
-  border-color: rgba(0, 0, 0, 0.08);
-}
-
-.targetGoalIconBox {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.targetGoalInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.targetGoalTitle {
-  font-size: 0.82rem;
-  color: var(--text-primary);
-}
-
-.targetGoalTitle strong {
-  color: #10b981;
-}
-
-.targetAchievedPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #10b981;
-}
-
-.targetPendingPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #f59e0b;
 }
 
 .heroRight {
@@ -359,6 +303,10 @@
   }
 }
 
+.playerColumn {
+  width: 100%;
+}
+
 .inspectorBentoCard {
   width: 100%;
   border-radius: 18px;
@@ -372,6 +320,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .playerTitleWrapper {
@@ -390,17 +340,56 @@
   color: var(--text-primary);
 }
 
-.playerLivePill {
+/* Header Controls: Overlays Toggle & Issues Detected Pill */
+.locatorControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.overlayToggleBtn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 10px;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  padding: 4px 11px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 9999px;
-  color: #38bdf8;
+  color: var(--text-secondary);
   font-size: 0.72rem;
   font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.overlayToggleBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.overlayToggleActive {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
+[data-theme='light'] .overlayToggleBtn {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+.issuesDetectedPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 11px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 9999px;
+  color: #ef4444;
+  font-size: 0.72rem;
+  font-weight: 750;
 }
 
 /* Viewport with Bounding Box Overlays */
@@ -464,7 +453,7 @@
   width: 90%;
 }
 
-/* SVG Bounding Box Overlays */
+/* SVG Bounding Box Overlays with Two-Way Hover/Click Sync */
 .bboxSvgOverlay {
   position: absolute;
   inset: 0;
@@ -472,52 +461,123 @@
   height: 100%;
   pointer-events: auto;
   z-index: 5;
+  transition: opacity 0.25s ease;
+}
+
+.bboxSvgHidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .bboxGroup {
   cursor: pointer;
+  opacity: 0.45;
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.bboxGroupActive {
+  opacity: 1 !important;
+}
+
+.bboxGroupDimmed {
+  opacity: 0.2 !important;
+}
+
+.bboxGroupResolved {
+  opacity: 0.85;
+}
+
+.bboxGroupResolved.bboxGroupActive {
+  opacity: 1 !important;
 }
 
 .bboxRect {
-  fill: rgba(225, 29, 72, 0.15);
-  stroke: #e11d48;
-  stroke-width: 3;
-  stroke-dasharray: 8 4;
-  animation: strokePulse 2.5s infinite linear;
-  transition: all 0.2s ease;
+  stroke-width: 2.5;
+  stroke-dasharray: 8 5;
+  transition: all 0.25s ease;
 }
 
 .bboxRectActive {
-  fill: rgba(229, 28, 35, 0.32);
-  stroke: #e51c23;
-  stroke-width: 5;
-  stroke-dasharray: none;
-  filter: drop-shadow(0 0 10px rgba(229, 28, 35, 0.8));
+  stroke-width: 4.5 !important;
+  stroke-dasharray: none !important;
+  filter: drop-shadow(0 0 14px var(--issue-color, #ef4444));
+  animation: boxGlowPulse 2s infinite ease-in-out;
 }
 
-@keyframes strokePulse {
-  to {
-    stroke-dashoffset: -24;
+.bboxRectResolved {
+  stroke: #10b981 !important;
+  stroke-dasharray: none !important;
+  filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.7));
+}
+
+@keyframes boxGlowPulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 12px var(--issue-color, #ef4444));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px var(--issue-color, #ef4444));
   }
 }
 
-.bboxLabel {
-  background: #e11d48;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
-  display: inline-block;
+/* Numbered Circular Badge on Poster Bounding Box */
+.bboxBadgeCircle {
+  stroke: #ffffff;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7));
+  transition: transform 0.2s ease, fill 0.2s ease;
 }
 
-.bboxLabelActive {
-  background: #e51c23;
-  box-shadow: 0 0 14px rgba(229, 28, 35, 0.9);
+.bboxBadgeText {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 17px;
+  font-weight: 900;
+  fill: #ffffff;
+  dominant-baseline: central;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+/* Compact Category Tooltip on Hover/Active */
+.tooltipForeignObject {
+  overflow: visible;
+  pointer-events: none;
+}
+
+.bboxTooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  background: rgba(11, 13, 20, 0.94);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--tooltip-border, rgba(255, 255, 255, 0.2));
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.bboxTooltipResolved {
+  border-color: #10b981 !important;
+  background: rgba(6, 78, 59, 0.92);
+}
+
+.tooltipText {
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.tooltipResolvedTag {
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+  background: #10b981;
+  color: #ffffff;
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
 /* Timeline Markers */
@@ -576,9 +636,14 @@
   box-shadow: 0 0 12px #e51c23;
 }
 
+.timelineMarkerResolved {
+  background: #10b981 !important;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8);
+}
+
 .marker_severe,
 .marker_critical {
-  background: #e11d48;
+  background: #ef4444;
 }
 
 .marker_moderate {
@@ -587,7 +652,7 @@
 
 .marker_mild,
 .marker_low {
-  background: #38bdf8;
+  background: #3b82f6;
 }
 
 .markerTooltip {
@@ -686,75 +751,148 @@
 .issuesList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
+/* Issue Card Restructured 3-Part Hierarchy */
 .issueCard {
   width: 100%;
   border-radius: 14px;
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.22s ease;
+  border: 1px solid var(--card-border);
 }
 
-.issueCardActive {
-  border-color: var(--accent-primary) !important;
-  box-shadow: 0 0 20px var(--accent-primary-glow) !important;
+.issueCardHovered {
+  border-color: var(--card-accent-color, var(--accent-primary)) !important;
+  transform: translateY(-1px);
 }
 
-.issueTopRow {
+.issueCardSelected {
+  border-color: var(--card-accent-color, var(--accent-primary)) !important;
+  box-shadow: 0 0 22px rgba(239, 68, 68, 0.25) !important;
+}
+
+.issueCardResolved {
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  background: rgba(16, 185, 129, 0.03) !important;
+}
+
+/* 1. Card Header (The "What") */
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardHeaderLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.cardNumberBadge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 850;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.cardTitleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cardIssueTitle {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+
+.cardMetaRow {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.locationPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 9999px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: var(--text-primary);
-}
-
-.modalityTag {
-  padding: 3px 8px;
-  background: rgba(56, 189, 248, 0.1);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+.categoryPill {
+  display: inline-block;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: #38bdf8;
-}
-
-.themeTag {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 750;
   color: var(--text-secondary);
 }
 
-.severityTag {
-  margin-left: auto;
-  padding: 3px 8px;
+[data-theme='light'] .categoryPill {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.timestampPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.cardHeaderRight {
+  flex-shrink: 0;
+}
+
+.severityBadge {
+  padding: 3px 10px;
   border-radius: 6px;
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.resolvedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  background: rgba(16, 185, 129, 0.18);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
 }
 
 .sev_critical,
-.sev_severe {
-  background: rgba(225, 29, 72, 0.15);
-  color: #fb7185;
-  border: 1px solid rgba(225, 29, 72, 0.35);
+.sev_severe,
+.sev_high {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
 }
 
 .sev_moderate {
@@ -763,98 +901,194 @@
   border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
-.sev_mild,
 .sev_low,
+.sev_mild,
 .sev_none {
-  background: rgba(16, 185, 129, 0.15);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.35);
 }
 
-.offendingBox {
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.3);
-  border-left: 3px solid #e11d48;
+/* 2. Card Body (The "Why") */
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.depictionContainer {
+  padding: 9px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 3px solid var(--card-accent-color, #ef4444);
   border-radius: 6px;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.offendingLabel {
+[data-theme='light'] .depictionContainer {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.depictionLabel {
   font-size: 0.68rem;
   font-weight: 750;
   text-transform: uppercase;
   color: var(--text-muted);
+  letter-spacing: 0.05em;
 }
 
-.offendingSnippet {
+.depictionSnippet {
   font-size: 0.84rem;
   font-weight: 600;
   color: var(--text-primary);
   font-style: italic;
+  line-height: 1.45;
 }
 
-.problemDesc {
-  font-size: 0.82rem;
+/* Collapsible Regulatory Guideline Accordion */
+.regulatoryAccordion {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+[data-theme='light'] .regulatoryAccordion {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.regulatorySummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.regulatorySummary::-webkit-details-marker {
+  display: none;
+}
+
+.regulatorySummaryText {
+  font-size: 0.76rem;
+  font-weight: 750;
+  color: var(--text-secondary);
+}
+
+.regulatorySummary:hover .regulatorySummaryText {
+  color: var(--text-primary);
+}
+
+.accordionArrow {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.regulatoryAccordion[open] .accordionArrow {
+  transform: rotate(180deg);
+}
+
+.regulatoryBody {
+  padding: 8px 12px 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+[data-theme='light'] .regulatoryBody {
+  border-top-color: rgba(0, 0, 0, 0.06);
+}
+
+.regulatoryText {
+  font-size: 0.78rem;
   color: var(--text-secondary);
   line-height: 1.5;
 }
 
-/* 3-Tier Remediation Card */
-.remediationCard {
-  background: rgba(16, 185, 129, 0.06);
-  border: 1px solid rgba(16, 185, 129, 0.25);
+/* 3. Card Footer Box (The "How to Fix") */
+.cardFooterSubpanel {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-left: 4px solid #10b981;
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+[data-theme='light'] .cardFooterSubpanel {
+  background: rgba(16, 185, 129, 0.08);
 }
 
 .remediationHeader {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.wrenchIcon {
+.remediationTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.remediationWrenchIcon {
   color: #10b981;
 }
 
-.remediationTitle {
-  font-size: 0.76rem;
-  color: var(--text-primary);
-}
-
-.remediationTitle strong {
-  color: #10b981;
-}
-
-.editTypeBadge {
-  margin-left: auto;
-  font-size: 0.68rem;
+.remediationSectionTitle {
+  font-size: 0.74rem;
   font-weight: 800;
-  padding: 2px 7px;
-  background: rgba(16, 185, 129, 0.2);
-  border-radius: 4px;
-  color: #10b981;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
-.remediationInstruction {
+.fixButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 6px;
+  color: #10b981;
+  font-size: 0.72rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fixButton:hover {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: #10b981;
+  transform: translateY(-1px);
+}
+
+.remediationActionCopy {
   font-size: 0.84rem;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1.45;
 }
 
-.ratingImpact {
+.ratingImpactRow {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 0.72rem;
   color: var(--text-muted);
+}
+
+.impactIcon {
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 /* 6-Theme Matrix Grid */
@@ -877,6 +1111,21 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.themeCardClickable {
+  cursor: pointer;
+}
+
+.themeCardClickable:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+.themeCardCompliant {
+  opacity: 0.65;
+  cursor: default;
 }
 
 .descTop {
@@ -889,14 +1138,20 @@
   width: 24px;
   height: 24px;
   border-radius: 6px;
-  background: rgba(229, 28, 35, 0.15);
-  border: 1px solid rgba(229, 28, 35, 0.3);
-  color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-secondary);
   font-size: 0.74rem;
   font-weight: 800;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.themeIdBadgeFlagged {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #f59e0b;
 }
 
 .descName {
@@ -922,7 +1177,8 @@
 
 .themeFooter {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 4px;
 }
 
@@ -932,7 +1188,21 @@
   color: var(--text-muted);
 }
 
-/* Simulator Container */
+.countPillFlagged {
+  color: #f59e0b;
+  font-weight: 800;
+}
+
+.viewIssuesLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: var(--accent-primary);
+}
+
+/* Simulator Container & Status Shift Banner */
 .simCardTop {
   display: flex;
   align-items: center;
@@ -942,7 +1212,64 @@
 }
 
 .simHeaderInfo {
-  max-width: 380px;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.statusShiftContainer {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.statusShiftBadgeCurrent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  font-size: 0.74rem;
+}
+
+.statusShiftBadgeProjected {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  transition: all 0.25s ease;
+}
+
+.statusShiftProjectedActive {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  color: #10b981 !important;
+}
+
+.statusShiftPrefix {
+  font-size: 0.65rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.statusShiftText {
+  font-weight: 800;
+}
+
+.statusShiftArrow {
+  font-size: 0.82rem;
+  color: var(--text-muted);
 }
 
 .simComparisonCard {
@@ -953,6 +1280,11 @@
   background: rgba(18, 20, 28, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
+}
+
+[data-theme='light'] .simComparisonCard {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(0, 0, 0, 0.08);
 }
 
 .simScoreBox {
@@ -1003,19 +1335,29 @@
   transition: all 0.2s ease;
 }
 
+[data-theme='light'] .suggestionItem {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
 .suggestionItem:hover {
   border-color: #10b981;
 }
 
 .suggestionChecked {
-  border-color: #10b981;
-  background: rgba(16, 185, 129, 0.08);
+  border-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+}
+
+.checkboxWrapper {
+  display: flex;
+  align-items: center;
 }
 
 .checkboxInput {
   accent-color: #10b981;
-  width: 16px;
-  height: 16px;
+  width: 17px;
+  height: 17px;
   cursor: pointer;
 }
 
@@ -1037,13 +1379,16 @@
   color: var(--text-muted);
 }
 
-.projectedPill {
-  font-size: 0.72rem;
-  font-weight: 750;
+/* Green Delta Reduction Badge */
+.deltaReductionBadge {
+  font-size: 0.74rem;
+  font-weight: 850;
   color: #10b981;
-  padding: 3px 8px;
-  background: rgba(16, 185, 129, 0.12);
-  border-radius: 6px;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 8px;
+  white-space: nowrap;
 }
 
 .noFixesText {

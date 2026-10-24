@@ -60,12 +60,14 @@ function LoginForm() {
 
   const handleIdentifierChange = (val) => {
     setUsername(val);
-    const hasUpperCase = /[A-Z]/.test(val);
-    if (hasUpperCase && val.includes('@') && !capsModal.isOpen) {
+  };
+
+  const handleIdentifierBlur = () => {
+    if (username.includes('@') && /[A-Z]/.test(username)) {
       setCapsModal({
         isOpen: true,
-        typedEmail: val,
-        lowerEmail: val.toLowerCase().trim(),
+        typedEmail: username,
+        lowerEmail: username.toLowerCase().trim(),
       });
     }
   };
@@ -79,11 +81,22 @@ function LoginForm() {
     setCapsModal({ isOpen: false, typedEmail: '', lowerEmail: '' });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const handleSubmit = async (e, bypassCaps = false) => {
+    if (e) e.preventDefault();
     setError('');
     setInfoMsg('');
+
+    // Check if uppercase in email
+    if (!bypassCaps && username.includes('@') && /[A-Z]/.test(username)) {
+      setCapsModal({
+        isOpen: true,
+        typedEmail: username,
+        lowerEmail: username.toLowerCase().trim(),
+      });
+      return;
+    }
+
+    setLoading(true);
 
     try {
       // Normalize identifier (handles case insensitivity for emails and usernames)
@@ -137,9 +150,14 @@ function LoginForm() {
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
               <div className={styles.warningIconBox}>
-                <AlertTriangle size={22} />
+                <AlertTriangle size={24} />
               </div>
-              <h3 className={styles.modalTitle}>Uppercase Email Warning</h3>
+              <div>
+                <h3 className={styles.modalTitle}>Uppercase Email Warning</h3>
+                <span style={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 700 }}>
+                  AUTHENTICATION ALERT
+                </span>
+              </div>
             </div>
             <p className={styles.modalBody}>
               Email addresses are registered in lowercase. Capital letters can prevent an exact match on some mobile keyboards.
@@ -151,10 +169,13 @@ function LoginForm() {
             <div className={styles.modalActions}>
               <button
                 type="button"
-                onClick={handleDismissCapsModal}
+                onClick={() => {
+                  handleDismissCapsModal();
+                  handleSubmit(null, true);
+                }}
                 className={styles.modalDismissBtn}
               >
-                Keep As Is
+                Keep Current
               </button>
               <button
                 type="button"
@@ -183,10 +204,10 @@ function LoginForm() {
             />
           </div>
           <h1 className={styles.title}>
-            SHORTFUNDLY <span className={styles.redHighlight}>CensorAI</span>
+            Sign in to <span className={styles.redHighlight}>Shortfundly CensorAI</span>
           </h1>
           <p className={styles.subtitle}>
-            OTT Regulatory & Content Compliance Authentication Gateway
+            Enter your studio account credentials to access regulatory compliance reports
           </p>
         </div>
 
@@ -207,20 +228,35 @@ function LoginForm() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form onSubmit={(e) => handleSubmit(e, false)} className={styles.form}>
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>
-              <span>Username or Email</span>
+            <div className={styles.labelRow}>
+              <label className={styles.label} style={{ marginBottom: 0 }}>Username or Email</label>
               {username.includes('@') && /[A-Z]/.test(username) && (
-                <span className={styles.capsIndicator}>CAPS DETECTED</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCapsModal({
+                      isOpen: true,
+                      typedEmail: username,
+                      lowerEmail: username.toLowerCase().trim(),
+                    });
+                  }}
+                  className={styles.capsIndicatorBtn}
+                  title="Uppercase letters detected in email. Click to convert."
+                >
+                  <AlertTriangle size={11} />
+                  <span>CAPS DETECTED — FIX</span>
+                </button>
               )}
-            </label>
+            </div>
             <div className={styles.inputWrapper}>
               <User size={16} className={styles.inputIcon} />
               <input
                 type="text"
                 value={username}
                 onChange={(e) => handleIdentifierChange(e.target.value)}
+                onBlur={handleIdentifierBlur}
                 placeholder="Enter username or email"
                 required
                 autoComplete="username"
@@ -234,21 +270,21 @@ function LoginForm() {
             <div className={styles.inputWrapper}>
               <Lock size={16} className={styles.inputIcon} />
               <input
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 required
                 autoComplete="current-password"
                 className={styles.input}
-                style={{ paddingRight: "42px" }}
+                style={{ paddingRight: '42px' }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
                 className={styles.togglePasswordBtn}
-                title={showPassword ? "Hide password" : "Show password"}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -264,7 +300,7 @@ function LoginForm() {
               <span className={styles.loadingSpinner}>Authenticating...</span>
             ) : (
               <>
-                <span>Sign In to Compliance Studio</span>
+                <span>Sign In to Studio</span>
                 <ArrowRight size={16} />
               </>
             )}
@@ -273,7 +309,7 @@ function LoginForm() {
 
         {/* Switch to Register */}
         <div className={styles.footerLinks}>
-          <span className={styles.footerText}>New compliance officer?</span>{' '}
+          <span className={styles.footerText}>Need a studio account?</span>{' '}
           <Link href="/register" className={styles.link}>
             Create an Account
           </Link>
@@ -282,7 +318,7 @@ function LoginForm() {
         {/* Regulatory Badge */}
         <div className={styles.complianceBadge}>
           <ShieldCheck size={14} />
-          <span>Encrypted Session • Ministry of I&B Ethics Code Compliant</span>
+          <span>Encrypted Studio Session • CBFC Section 5B Audited</span>
         </div>
       </div>
     </div>
@@ -291,7 +327,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className={styles.authContainer} />}>
+    <Suspense fallback={<div className={styles.authContainer}><div className={styles.authCard}>Loading authentication...</div></div>}>
       <LoginForm />
     </Suspense>
   );

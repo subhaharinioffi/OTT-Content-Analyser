@@ -26,16 +26,100 @@ import {
   Music,
   Image as ImageIcon,
   ChevronRight,
+  ChevronDown,
   ExternalLink,
   Target,
   Crosshair,
   Maximize2,
   Wrench,
   Info,
+  Eye,
+  EyeOff,
+  Check,
 } from 'lucide-react';
 import CinemaVideoWallBg from '@/components/CinemaVideoWallBg';
 import MagicBentoCard from '@/components/MagicBentoCard';
 import styles from './report.module.css';
+
+/**
+ * Strips raw coordinate bracket patterns (e.g., "[ymin:880, xmin:50, ymax:970, xmax:950]"
+ * or "Box [720,60,960,940]") and converts them into natural, human-readable placement phrases.
+ */
+function sanitizeCoordinateText(text) {
+  if (!text || typeof text !== 'string') return text || '';
+
+  let sanitized = text;
+
+  // Match patterns like "across [ymin:880, xmin:50, ymax:970, xmax:950]" or "[ymin:180...]"
+  sanitized = sanitized.replace(
+    /(?:across|at|in|within|over|along)?\s*\[\s*(?:ymin\s*:\s*(\d+)[,\s]+xmin\s*:\s*(\d+)[,\s]+ymax\s*:\s*(\d+)[,\s]+xmax\s*:\s*(\d+)|(\d+)[,\s]+(\d+)[,\s]+(\d+)[,\s]+(\d+))\s*\]/gi,
+    (match, ymin1, xmin1, ymax1, xmax1, ymin2, xmin2, ymax2, xmax2) => {
+      const ymin = parseInt(ymin1 || ymin2, 10);
+      const ymax = parseInt(ymax1 || ymax2, 10);
+      const yAvg = (ymin + ymax) / 2;
+
+      // Select human placement term based on vertical position
+      if (yAvg >= 650) {
+        return 'across the bottom margin';
+      } else if (yAvg <= 350) {
+        return 'in the upper region';
+      } else {
+        return 'in the center frame';
+      }
+    }
+  );
+
+  // Clean remaining raw box labels or coordinate brackets
+  sanitized = sanitized
+    .replace(/Box\s*\[[^\]]+\]/gi, '')
+    .replace(/\[\s*ymin[^\]]*\]/gi, '')
+    .replace(/\[\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\]/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  return sanitized;
+}
+
+/**
+ * Extracts a concise, human-readable issue title from issue metadata,
+ * removing redundant raw position labels.
+ */
+function getIssueTitle(issue, index) {
+  if (issue.title) return sanitizeCoordinateText(issue.title);
+
+  if (issue.regionLabel) {
+    const cleaned = issue.regionLabel
+      .replace(/^(Bottom Margins?|Central Character Silhouette|Upper Region|Top Margins?|Header Region|Background Region)\s*[-:]\s*/i, '')
+      .trim();
+    if (cleaned.length > 0) return sanitizeCoordinateText(cleaned);
+  }
+
+  if (issue.offendingSnippet) {
+    const match = issue.offendingSnippet.match(/^([^:.]+)(?::|\.)/);
+    if (match && match[1].length >= 8 && match[1].length <= 55) {
+      return sanitizeCoordinateText(match[1].trim());
+    }
+  }
+
+  const categoryName = issue.themeName?.replace(/\s*\([A-Z]\)/, '') || 'Compliance Concern';
+  return `${categoryName} Flag #${index + 1}`;
+}
+
+function getSeverityKey(severity) {
+  const s = String(severity || '').toLowerCase();
+  if (s.includes('crit') || s.includes('sev') || s.includes('high')) return 'critical';
+  if (s.includes('mod') || s.includes('med')) return 'moderate';
+  if (s.includes('low') || s.includes('mild')) return 'low';
+  return 'low';
+}
+
+function getSeverityColor(severity, isResolved = false) {
+  if (isResolved) return '#10b981';
+  const key = getSeverityKey(severity);
+  if (key === 'critical') return '#ef4444';
+  if (key === 'moderate') return '#f59e0b';
+  return '#3b82f6';
+}
 
 export default function ReportPage() {
   const { id } = useParams();
@@ -48,6 +132,8 @@ export default function ReportPage() {
   const [activeTab, setActiveTab] = useState('pinpointed'); // 'pinpointed' | 'matrix' | 'simulator'
   const [appliedFixes, setAppliedFixes] = useState({});
   const [selectedIssueId, setSelectedIssueId] = useState(null);
+  const [hoveredIssueId, setHoveredIssueId] = useState(null);
+  const [showOverlays, setShowOverlays] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(() => {
@@ -96,6 +182,18 @@ export default function ReportPage() {
     }));
   };
 
+  const isIssueResolved = (index, issueId) => {
+    return Boolean(appliedFixes[index] || (issueId && appliedFixes[issueId]));
+  };
+
+  const handleOpenInSimulator = (index) => {
+    setActiveTab('simulator');
+    setAppliedFixes((prev) => ({
+      ...prev,
+      [index]: true,
+    }));
+  };
+
   // Calculate simulated risk score based on toggled fixes
   const calculateSimulatedRisk = () => {
     if (!report) return 0;
@@ -112,7 +210,7 @@ export default function ReportPage() {
     return Math.max(5, Math.round(base - reduction));
   };
 
-  // Generate Branded PDF Compliance Certificate
+  // Export Clean PDF Certificate without raw coordinates
   const exportPDF = () => {
     if (!report) return;
 
@@ -143,7 +241,11 @@ export default function ReportPage() {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(180, 190, 205);
     doc.text('Official OTT Content Compliance & CBFC Section 5B / IT Rules 2021 Assessment', 14, 24);
-    doc.text(`Certificate No: SFC-${(report._id?.toString() || report.id || 'AUDIT').slice(-8).toUpperCase()} | Date: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(
+      `Certificate No: SFC-${(report._id?.toString() || report.id || 'AUDIT').slice(-8).toUpperCase()} | Date: ${new Date().toLocaleDateString()}`,
+      14,
+      30
+    );
 
     // Section 1: Specifications
     doc.setTextColor(15, 23, 42);
@@ -161,7 +263,12 @@ export default function ReportPage() {
       body: [
         ['Asset Title', report.title, 'Statutory Age Rating', assignedRating],
         ['Format / Aspect', `${report.contentType} (${report.aspectRatio})`, 'Target Rating Goal', targetGoal],
-        ['Duration / File', `${report.duration ? report.duration + ' sec' : 'N/A'} • ${(report.fileSize / 1024 / 1024).toFixed(2)} MB`, 'Target Goal Status', isTargetAchieved],
+        [
+          'Duration / File',
+          `${report.duration ? report.duration + ' sec' : 'N/A'} • ${(report.fileSize / 1024 / 1024).toFixed(2)} MB`,
+          'Target Goal Status',
+          isTargetAchieved,
+        ],
         ['Content Descriptor', report.officialContentDescriptor || 'Standard Broadcast Rating', 'Release Friction', `${report.riskScore ?? 25}% Friction`],
       ],
       theme: 'grid',
@@ -181,7 +288,7 @@ export default function ReportPage() {
     const splitSummary = doc.splitTextToSize(report.executiveSummary || report.summary || 'Compliant with standards.', 182);
     doc.text(splitSummary, 14, summaryY + 5);
 
-    // Section 3: Pinpointed Issues & 3-Tier Remediation
+    // Section 3: Pinpointed Issues & 3-Tier Remediation (Sanitized without raw coordinate arrays)
     const issues = report.pinpointedIssues && report.pinpointedIssues.length > 0
       ? report.pinpointedIssues
       : report.violations || [];
@@ -193,20 +300,28 @@ export default function ReportPage() {
       doc.setTextColor(15, 23, 42);
       doc.text('3. PINPOINTED COMPLIANCE ISSUES & ACTIONABLE REMEDIATION', 14, issueY);
 
-      const issueRows = issues.map((p) => {
+      const issueRows = issues.map((p, idx) => {
         const location = p.timestampStart
           ? `${p.timestampStart}-${p.timestampEnd}`
-          : p.boundingBox
-          ? `Box [${p.boundingBox.ymin},${p.boundingBox.xmin},${p.boundingBox.ymax},${p.boundingBox.xmax}]`
-          : 'Static Visual';
+          : p.boundingBox?.regionLabel
+          ? sanitizeCoordinateText(p.boundingBox.regionLabel)
+          : `Visual Issue #${idx + 1}`;
 
-        const rem = p.remediation?.toAchieveTargetRating || p.actionableSuggestion || 'Apply standard editorial cut';
-        return [location, p.themeName || p.category || 'Theme', p.severity || 'Moderate', p.problemDescription || p.description || 'Statutory issue', rem];
+        const rem = sanitizeCoordinateText(p.remediation?.toAchieveTargetRating || p.actionableSuggestion || 'Apply standard editorial cut');
+        const problem = sanitizeCoordinateText(p.problemDescription || p.description || 'Statutory compliance concern');
+
+        return [
+          `#${idx + 1} (${location})`,
+          p.themeName || p.category || 'Theme',
+          p.severity || 'Moderate',
+          problem,
+          rem,
+        ];
       });
 
       doc.autoTable({
         startY: issueY + 4,
-        head: [['Where (Time/Box)', 'Theme', 'Severity', 'Triggered Statutory Violation', 'Remediation (To Reach Target)']],
+        head: [['Where (Time / Region)', 'Theme', 'Severity', 'Triggered Statutory Violation', 'Remediation (To Reach Target)']],
         body: issueRows,
         theme: 'grid',
         headStyles: { fillColor: primaryColor, textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -276,7 +391,82 @@ export default function ReportPage() {
         },
       }));
 
-  const activeIssue = issuesList.find((i) => i.id === selectedIssueId) || issuesList[0];
+  const activeIssue = issuesList.find((i) => i.id === (hoveredIssueId || selectedIssueId)) || issuesList.find((i) => i.id === selectedIssueId) || issuesList[0];
+  const activeIssueId = hoveredIssueId || selectedIssueId;
+  const hasActiveSelection = Boolean(activeIssueId);
+
+  // Status computation for What-If Simulator
+  const currentFriction = report.riskScore ?? 25;
+  const hasAnyFixApplied = Object.values(appliedFixes).some(Boolean);
+
+  const getCurrentStatusText = () => {
+    if (report.status && (report.status.toLowerCase().includes('reject') || report.status.toLowerCase().includes('fail'))) {
+      return report.status;
+    }
+    if (currentFriction >= 40) return 'Flagged for Rejection';
+    if (currentFriction >= 20) return 'Conditional Approval';
+    return 'Standard Clearance';
+  };
+
+  const getProjectedStatusText = () => {
+    if (!hasAnyFixApplied) {
+      return getCurrentStatusText();
+    }
+    if (simulatedRisk <= 15) {
+      return 'Ready for Standard Clearance';
+    }
+    if (simulatedRisk < currentFriction) {
+      return 'Conditional Review Clearance';
+    }
+    return 'Remediation In Progress';
+  };
+
+  // 6-Theme Matrix sorting and flag count mapping
+  const defaultThemeMatrix = [
+    { themeId: 'V', themeName: 'Violence', severity: 'Moderate', violationCount: 1, summaryNote: 'Combat sequences with physical impact cues.' },
+    { themeId: 'S', themeName: 'Nudity & Sex', severity: 'None', violationCount: 0, summaryNote: 'No anatomical or explicit nudity detected.' },
+    { themeId: 'L', themeName: 'Language', severity: 'Mild', violationCount: 1, summaryNote: 'Street dialogue with occasional colloquial slang.' },
+    { themeId: 'D', themeName: 'Substance Abuse', severity: 'Moderate', violationCount: 1, summaryNote: 'Depiction of smoking/alcohol requires statutory warning.' },
+    { themeId: 'T', themeName: 'Threat, Horror & Mature Themes', severity: 'Low', violationCount: 0, summaryNote: 'Psychological thriller suspense.' },
+    { themeId: 'C', themeName: 'Discrimination & Sovereignty', severity: 'None', violationCount: 0, summaryNote: 'No defamation or communal discord identified.' },
+  ];
+
+  const rawThemes = report.themeMatrix && report.themeMatrix.length > 0 ? report.themeMatrix : defaultThemeMatrix;
+
+  const getThemeIssueMatches = (theme) => {
+    return issuesList.filter((issue) => {
+      const tId = (theme.themeId || '').toUpperCase();
+      const iId = (issue.themeId || '').toUpperCase();
+      if (tId && iId && tId === iId) return true;
+
+      const tName = (theme.themeName || '').toLowerCase().replace(/\s*\([a-z]\)/g, '').trim();
+      const iName = (issue.themeName || '').toLowerCase().replace(/\s*\([a-z]\)/g, '').trim();
+      return Boolean(tName && iName && (tName.includes(iName) || iName.includes(tName)));
+    });
+  };
+
+  const sortedThemeMatrix = [...rawThemes].sort((a, b) => {
+    const matchesA = getThemeIssueMatches(a);
+    const matchesB = getThemeIssueMatches(b);
+    const countA = Math.max(a.violationCount || 0, matchesA.length);
+    const countB = Math.max(b.violationCount || 0, matchesB.length);
+
+    const getRank = (t, count) => {
+      const sev = (t.severity || '').toLowerCase();
+      const isCompliant = (sev === 'none' || sev === '') && count === 0;
+      if (isCompliant) return 0;
+      if (sev.includes('crit') || sev.includes('sev') || sev.includes('high')) return 4;
+      if (sev.includes('mod') || sev.includes('med')) return 3;
+      if (sev.includes('low') || sev.includes('mild') || count > 0) return 2;
+      return 1;
+    };
+
+    const rankA = getRank(a, countA);
+    const rankB = getRank(b, countB);
+
+    if (rankA !== rankB) return rankB - rankA;
+    return countB - countA;
+  });
 
   return (
     <div className={styles.reportWrapper}>
@@ -311,9 +501,6 @@ export default function ReportPage() {
               </div>
               <h1 className={styles.assetTitle}>{report.title}</h1>
               <p className={styles.summaryText}>{report.executiveSummary || report.summary}</p>
-
-              {/* Target Rating Goal Callout */}
-              
             </div>
 
             {/* Badges: Statutory Rating & Risk Friction */}
@@ -370,17 +557,25 @@ export default function ReportPage() {
                     Compliance Inspector &amp; Visual Locator ({report.aspectRatio})
                   </span>
                 </div>
-                {isPoster ? (
-                  <span className={styles.playerLivePill}>
+
+                {/* Clean Header Controls with Overlays Toggle & Issues Detected Pill */}
+                <div className={styles.locatorControls}>
+                  {isPoster && (
+                    <button
+                      type="button"
+                      onClick={() => setShowOverlays((prev) => !prev)}
+                      className={`${styles.overlayToggleBtn} ${showOverlays ? styles.overlayToggleActive : ''}`}
+                      title={showOverlays ? 'Hide bounding box overlays' : 'Show bounding box overlays'}
+                    >
+                      {showOverlays ? <Eye size={13} /> : <EyeOff size={13} />}
+                      <span>{showOverlays ? 'Hide Overlays' : 'Show Overlays'}</span>
+                    </button>
+                  )}
+                  <span className={styles.issuesDetectedPill}>
                     <Crosshair size={13} />
-                    <span>[ymin, xmin, ymax, xmax] Coordinates</span>
+                    <span>{issuesList.length} {issuesList.length === 1 ? 'Issue Detected' : 'Issues Detected'}</span>
                   </span>
-                ) : (
-                  <span className={styles.playerLivePill}>
-                    <Clock size={13} />
-                    <span>Interactive Timeline</span>
-                  </span>
-                )}
+                </div>
               </div>
 
               {/* Viewport with Bounding Box Overlay support */}
@@ -397,45 +592,116 @@ export default function ReportPage() {
                       className={styles.inspectorImage}
                     />
 
-                    {/* SVG Bounding Box Overlays for Poster (normalized 0-1000 coordinates) */}
+                    {/* SVG Bounding Box Overlays for Poster (0-1000 coordinate canvas) */}
                     <svg
                       viewBox="0 0 1000 1000"
                       preserveAspectRatio="none"
-                      className={styles.bboxSvgOverlay}
+                      className={`${styles.bboxSvgOverlay} ${!showOverlays ? styles.bboxSvgHidden : ''}`}
                     >
-                      {issuesList.map((issue) => {
+                      {issuesList.map((issue, idx) => {
                         const box = issue.boundingBox;
                         if (!box || typeof box.ymin !== 'number') return null;
-                        const isSelected = issue.id === activeIssue?.id;
-                        const w = Math.max(20, box.xmax - box.xmin);
-                        const h = Math.max(20, box.ymax - box.ymin);
+
+                        const isResolved = isIssueResolved(idx, issue.id);
+                        const isSelected = issue.id === selectedIssueId;
+                        const isHovered = issue.id === hoveredIssueId;
+                        const isActive = isHovered || isSelected;
+
+                        const w = Math.max(24, box.xmax - box.xmin);
+                        const h = Math.max(24, box.ymax - box.ymin);
+                        const sevColor = getSeverityColor(issue.severity, isResolved);
+                        const issueNum = idx + 1;
+                        const categoryShort = issue.themeName?.replace(/\s*\([A-Z]\)/, '') || 'Issue';
 
                         return (
                           <g
                             key={issue.id}
-                            onClick={() => setSelectedIssueId(issue.id)}
-                            className={styles.bboxGroup}
+                            onClick={() => {
+                              setSelectedIssueId(issue.id);
+                              setActiveTab('pinpointed');
+                            }}
+                            onMouseEnter={() => setHoveredIssueId(issue.id)}
+                            onMouseLeave={() => setHoveredIssueId(null)}
+                            className={`${styles.bboxGroup} ${
+                              isActive ? styles.bboxGroupActive : ''
+                            } ${
+                              hasActiveSelection && !isActive ? styles.bboxGroupDimmed : ''
+                            } ${
+                              isResolved ? styles.bboxGroupResolved : ''
+                            }`}
+                            style={{
+                              '--issue-color': sevColor,
+                            }}
                           >
+                            {/* Bounding Box Rect */}
                             <rect
                               x={box.xmin}
                               y={box.ymin}
                               width={w}
                               height={h}
-                              className={`${styles.bboxRect} ${isSelected ? styles.bboxRectActive : ''}`}
+                              rx={6}
+                              className={`${styles.bboxRect} ${
+                                isActive ? styles.bboxRectActive : ''
+                              } ${
+                                isResolved ? styles.bboxRectResolved : ''
+                              }`}
+                              style={{
+                                stroke: sevColor,
+                                fill: isResolved
+                                  ? 'rgba(16, 185, 129, 0.16)'
+                                  : isActive
+                                  ? `${sevColor}28`
+                                  : `${sevColor}12`,
+                              }}
                             />
-                            {/* Region Label Tag */}
-                            <foreignObject
-                              x={box.xmin}
-                              y={Math.max(10, box.ymin - 38)}
-                              width={Math.max(240, w)}
-                              height={34}
+
+                            {/* Bold Circular Numbered Badge at top-left corner */}
+                            <circle
+                              cx={box.xmin + 22}
+                              cy={box.ymin + 22}
+                              r={18}
+                              className={styles.bboxBadgeCircle}
+                              style={{
+                                fill: sevColor,
+                              }}
+                            />
+                            <text
+                              x={box.xmin + 22}
+                              y={box.ymin + 28}
+                              textAnchor="middle"
+                              className={styles.bboxBadgeText}
                             >
-                              <div
-                                className={`${styles.bboxLabel} ${isSelected ? styles.bboxLabelActive : ''}`}
+                              {isResolved ? '✓' : `#${issueNum}`}
+                            </text>
+
+                            {/* Compact Category Tooltip on Active/Hover */}
+                            {isActive && (
+                              <foreignObject
+                                x={Math.max(6, Math.min(680, box.xmin + 46))}
+                                y={Math.max(6, box.ymin + 6)}
+                                width="280"
+                                height="38"
+                                className={styles.tooltipForeignObject}
                               >
-                                <span>{issue.themeName?.split(' ')[0]}: {box.regionLabel || 'Flagged Region'}</span>
-                              </div>
-                            </foreignObject>
+                                <div
+                                  className={`${styles.bboxTooltip} ${
+                                    isResolved ? styles.bboxTooltipResolved : ''
+                                  }`}
+                                  style={{
+                                    '--tooltip-border': sevColor,
+                                  }}
+                                >
+                                  <span className={styles.tooltipText}>
+                                    #{issueNum} {categoryShort}
+                                  </span>
+                                  {isResolved && (
+                                    <span className={styles.tooltipResolvedTag}>
+                                      ✓ Resolved
+                                    </span>
+                                  )}
+                                </div>
+                              </foreignObject>
+                            )}
                           </g>
                         );
                       })}
@@ -476,7 +742,7 @@ export default function ReportPage() {
                     </span>
                   </div>
                   <div className={styles.timelineTrack}>
-                    {issuesList.map((issue) => {
+                    {issuesList.map((issue, idx) => {
                       if (typeof issue.timestampSeconds !== 'number') return null;
                       const totalDur = report.duration || 60;
                       const posPercent = Math.min(
@@ -484,19 +750,22 @@ export default function ReportPage() {
                         Math.max(4, (issue.timestampSeconds / totalDur) * 100)
                       );
                       const isSelected = issue.id === activeIssue?.id;
+                      const isResolved = isIssueResolved(idx, issue.id);
 
                       return (
                         <button
                           key={issue.id}
                           onClick={() => handleSeek(issue.timestampSeconds, issue.id)}
+                          onMouseEnter={() => setHoveredIssueId(issue.id)}
+                          onMouseLeave={() => setHoveredIssueId(null)}
                           style={{ left: `${posPercent}%` }}
                           className={`${styles.timelineMarker} ${isSelected ? styles.timelineMarkerActive : ''} ${
-                            styles[`marker_${issue.severity?.toLowerCase()}`] || styles.markerDefault
+                            isResolved ? styles.timelineMarkerResolved : styles[`marker_${issue.severity?.toLowerCase()}`] || styles.markerDefault
                           }`}
                           title={`Jump to ${issue.timestampStart} - ${issue.themeName} (${issue.severity})`}
                         >
                           <span className={styles.markerTooltip}>
-                            {issue.timestampStart} {issue.themeName}
+                            #{idx + 1} {issue.timestampStart} {issue.themeName}
                           </span>
                         </button>
                       );
@@ -533,89 +802,144 @@ export default function ReportPage() {
               </button>
             </div>
 
-            {/* Tab 1: Pinpointed Issues with 3-Tier Actionable Remediation */}
+            {/* Tab 1: Pinpointed Issues with 3-Part Restructured Hierarchy (What -> Why -> How) */}
             {activeTab === 'pinpointed' && (
               <div className={styles.issuesContainer}>
                 <div className={styles.issuesHeader}>
                   <h3 className={styles.matrixTitle}>Where Issues Occur &amp; Actionable Remediation</h3>
                   <p className={styles.matrixDesc}>
-                    Every violation is pinpointed by timestamp or bounding box with instructions tailored to your target rating:
+                    Every violation is pinpointed with clear regulatory guidance and tailored editorial remediation:
                   </p>
                 </div>
 
                 <div className={styles.issuesList}>
-                  {issuesList.map((issue) => {
-                    const isSelected = issue.id === activeIssue?.id;
-                    const hasBox = !!issue.boundingBox;
+                  {issuesList.map((issue, idx) => {
+                    const isSelected = issue.id === selectedIssueId;
+                    const isHovered = issue.id === hoveredIssueId;
+                    const isResolved = isIssueResolved(idx, issue.id);
                     const hasTime = !!issue.timestampStart;
+                    const sevKey = getSeverityKey(issue.severity);
+                    const sevColor = getSeverityColor(issue.severity, isResolved);
+                    const issueTitle = getIssueTitle(issue, idx);
 
                     return (
                       <MagicBentoCard
                         key={issue.id}
-                        glowColor={issue.severity === 'Severe' || issue.severity === 'Critical' ? '#E11D48' : '#F59E0B'}
+                        glowColor={sevColor}
                         enableStars={false}
                         enableTilt={false}
-                        className={`${styles.issueCard} ${isSelected ? styles.issueCardActive : ''}`}
+                        className={`${styles.issueCard} ${isSelected ? styles.issueCardSelected : ''} ${
+                          isHovered ? styles.issueCardHovered : ''
+                        } ${isResolved ? styles.issueCardResolved : ''}`}
                         onClick={() => {
                           setSelectedIssueId(issue.id);
                           if (hasTime && typeof issue.timestampSeconds === 'number') {
                             handleSeek(issue.timestampSeconds, issue.id);
                           }
                         }}
+                        onMouseEnter={() => setHoveredIssueId(issue.id)}
+                        onMouseLeave={() => setHoveredIssueId(null)}
+                        style={{
+                          '--card-accent-color': sevColor,
+                        }}
                       >
-                        <div className={styles.issueTopRow}>
-                          <div className={styles.locationPill}>
-                            {hasTime ? (
-                              <>
-                                <Clock size={12} />
-                                <span>{issue.timestampStart} - {issue.timestampEnd}</span>
-                              </>
-                            ) : hasBox ? (
-                              <>
-                                <Crosshair size={12} />
-                                <span>Box [{issue.boundingBox.ymin},{issue.boundingBox.xmin},{issue.boundingBox.ymax},{issue.boundingBox.xmax}]</span>
-                              </>
+                        {/* 1. Card Header (The "What"): Numbered Badge + Title + Category Pill & Severity */}
+                        <div className={styles.cardHeader}>
+                          <div className={styles.cardHeaderLeft}>
+                            <div
+                              className={styles.cardNumberBadge}
+                              style={{
+                                backgroundColor: sevColor,
+                              }}
+                            >
+                              #{idx + 1}
+                            </div>
+                            <div className={styles.cardTitleInfo}>
+                              <h4 className={styles.cardIssueTitle}>{issueTitle}</h4>
+                              <div className={styles.cardMetaRow}>
+                                <span className={styles.categoryPill}>{issue.themeName}</span>
+                                {hasTime && (
+                                  <span className={styles.timestampPill}>
+                                    <Clock size={11} />
+                                    <span>{issue.timestampStart} - {issue.timestampEnd}</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className={styles.cardHeaderRight}>
+                            {isResolved ? (
+                              <span className={styles.resolvedBadge}>
+                                <Check size={11} />
+                                <span>RESOLVED</span>
+                              </span>
                             ) : (
-                              <span>Asset Element</span>
+                              <span className={`${styles.severityBadge} ${styles[`sev_${sevKey}`]}`}>
+                                {issue.severity}
+                              </span>
                             )}
                           </div>
-
-                          <span className={styles.modalityTag}>{issue.modality || 'Visual'}</span>
-                          <span className={styles.themeTag}>{issue.themeName}</span>
-                          <span className={`${styles.severityTag} ${styles[`sev_${issue.severity?.toLowerCase()}`] || ''}`}>
-                            {issue.severity}
-                          </span>
                         </div>
 
-                        {/* Offending Element */}
-                        <div className={styles.offendingBox}>
-                          <span className={styles.offendingLabel}>Identified Depiction:</span>
-                          <p className={styles.offendingSnippet}>&ldquo;{issue.offendingSnippet}&rdquo;</p>
+                        {/* 2. Card Body (The "Why"): Identified Depiction & Collapsible Regulatory Guideline */}
+                        <div className={styles.cardBody}>
+                          {issue.offendingSnippet && (
+                            <div className={styles.depictionContainer}>
+                              <span className={styles.depictionLabel}>Identified Depiction</span>
+                              <p className={styles.depictionSnippet}>&ldquo;{issue.offendingSnippet}&rdquo;</p>
+                            </div>
+                          )}
+
+                          {issue.problemDescription && (
+                            <details className={styles.regulatoryAccordion}>
+                              <summary className={styles.regulatorySummary}>
+                                <span className={styles.regulatorySummaryText}>
+                                  ⚖️ View Regulatory Guideline
+                                </span>
+                                <ChevronDown size={14} className={styles.accordionArrow} />
+                              </summary>
+                              <div className={styles.regulatoryBody}>
+                                <p className={styles.regulatoryText}>{issue.problemDescription}</p>
+                              </div>
+                            </details>
+                          )}
                         </div>
 
-                        {/* Problem Description */}
-                        <p className={styles.problemDesc}>{issue.problemDescription}</p>
-
-                        {/* 3-Tier Remediation Section */}
-                        <div className={styles.remediationCard}>
+                        {/* 3. Card Footer Box (The "How to Fix"): Actionable Remediation Subpanel */}
+                        <div className={styles.cardFooterSubpanel}>
                           <div className={styles.remediationHeader}>
-                            <Wrench size={14} className={styles.wrenchIcon} />
-                            <span className={styles.remediationTitle}>
-                              Actionable Compliance Remediation
-                            </span>
-                            {issue.remediation?.editType && (
-                              <span className={styles.editTypeBadge}>{issue.remediation.editType}</span>
-                            )}
+                            <div className={styles.remediationTitleGroup}>
+                              <Wrench size={13} className={styles.remediationWrenchIcon} />
+                              <span className={styles.remediationSectionTitle}>Actionable Compliance Remediation</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenInSimulator(idx);
+                              }}
+                              className={styles.fixButton}
+                              title="Test this fix in What-If Simulator"
+                            >
+                              <Sparkles size={12} />
+                              <span>🔧 Fix: {issue.remediation?.editType || 'Apply Disclaimer'}</span>
+                              <ChevronRight size={12} />
+                            </button>
                           </div>
 
-                          <div className={styles.remediationInstruction}>
-                            <strong>Action:</strong> {issue.remediation?.toAchieveTargetRating || issue.actionableSuggestion || 'Apply standard edit cut.'}
-                          </div>
+                          <p className={styles.remediationActionCopy}>
+                            {sanitizeCoordinateText(
+                              issue.remediation?.toAchieveTargetRating ||
+                              issue.actionableSuggestion ||
+                              'Apply standard editorial remediation.'
+                            )}
+                          </p>
 
                           {issue.remediation?.ratingImpactIfUnchanged && (
-                            <div className={styles.ratingImpact}>
-                              <Info size={12} />
-                              <span>{issue.remediation.ratingImpactIfUnchanged}</span>
+                            <div className={styles.ratingImpactRow}>
+                              <Info size={12} className={styles.impactIcon} />
+                              <span>{sanitizeCoordinateText(issue.remediation.ratingImpactIfUnchanged)}</span>
                             </div>
                           )}
                         </div>
@@ -626,50 +950,65 @@ export default function ReportPage() {
               </div>
             )}
 
-            {/* Tab 2: 6 Mandatory Statutory Themes Matrix */}
+            {/* Tab 2: 6 Mandatory Statutory Themes Matrix (Sorted by Priority & Interactive Filtering) */}
             {activeTab === 'matrix' && (
               <div className={styles.matrixContainer}>
                 <div className={styles.matrixHeader}>
                   <h3 className={styles.matrixTitle}>6 Mandatory Statutory Themes (CBFC &amp; IT Rules 2021)</h3>
                   <p className={styles.matrixDesc}>
-                    Evaluated across official Indian regulatory standards:
+                    Sorted by regulatory priority. Click any active category to jump directly to its pinpointed occurrences:
                   </p>
                 </div>
 
                 <div className={styles.matrixGrid}>
-                  {(report.themeMatrix && report.themeMatrix.length > 0
-                    ? report.themeMatrix
-                    : [
-                        { themeId: 'V', themeName: 'Violence', severity: 'Moderate', violationCount: 1, summaryNote: 'Combat sequences with physical impact cues.' },
-                        { themeId: 'S', themeName: 'Nudity & Sex', severity: 'None', violationCount: 0, summaryNote: 'No anatomical or explicit nudity detected.' },
-                        { themeId: 'L', themeName: 'Language', severity: 'Mild', violationCount: 1, summaryNote: 'Street dialogue with occasional colloquial slang.' },
-                        { themeId: 'D', themeName: 'Substance Abuse', severity: 'Moderate', violationCount: 1, summaryNote: 'Depiction of smoking/alcohol requires statutory warning.' },
-                        { themeId: 'T', themeName: 'Threat, Horror & Mature Themes', severity: 'Low', violationCount: 0, summaryNote: 'Psychological thriller suspense.' },
-                        { themeId: 'C', themeName: 'Discrimination & Sovereignty', severity: 'None', violationCount: 0, summaryNote: 'No defamation or communal discord identified.' },
-                      ]
-                  ).map((theme) => {
-                    const sev = theme.severity || 'None';
+                  {sortedThemeMatrix.map((theme) => {
+                    const matches = getThemeIssueMatches(theme);
+                    const flagCount = Math.max(theme.violationCount || 0, matches.length);
+                    const isFlagged = flagCount > 0 || (theme.severity && theme.severity.toLowerCase() !== 'none');
+                    const sevKey = getSeverityKey(theme.severity);
+
                     return (
                       <MagicBentoCard
                         key={theme.themeId}
-                        glowColor={sev === 'Severe' ? '#E11D48' : sev === 'Moderate' ? '#F59E0B' : '#10B981'}
+                        glowColor={isFlagged ? (sevKey === 'critical' ? '#EF4444' : '#F59E0B') : '#10B981'}
                         enableStars={false}
                         enableTilt={false}
-                        className={styles.descriptorCard}
+                        onClick={() => {
+                          if (isFlagged) {
+                            const target = matches[0] || issuesList[0];
+                            if (target) {
+                              setSelectedIssueId(target.id);
+                            }
+                            setActiveTab('pinpointed');
+                          }
+                        }}
+                        className={`${styles.descriptorCard} ${
+                          isFlagged ? styles.themeCardClickable : styles.themeCardCompliant
+                        }`}
+                        title={isFlagged ? `Click to inspect ${theme.themeName} in Pinpointed Issues` : `${theme.themeName} compliant`}
                       >
                         <div className={styles.descTop}>
-                          <div className={styles.themeIdBadge}>{theme.themeId}</div>
+                          <div className={`${styles.themeIdBadge} ${isFlagged ? styles.themeIdBadgeFlagged : ''}`}>
+                            {theme.themeId}
+                          </div>
                           <span className={styles.descName}>{theme.themeName}</span>
-                          <span className={`${styles.descSeverity} ${styles[`sev_${sev.toLowerCase()}`] || ''}`}>
-                            {sev}
+                          <span className={`${styles.descSeverity} ${styles[`sev_${sevKey}`] || ''}`}>
+                            {theme.severity || 'None'}
                           </span>
                         </div>
 
                         <p className={styles.descDetails}>{theme.summaryNote}</p>
+
                         <div className={styles.themeFooter}>
-                          <span className={styles.violationCountPill}>
-                            {theme.violationCount || 0} Flags
+                          <span className={`${styles.violationCountPill} ${isFlagged ? styles.countPillFlagged : ''}`}>
+                            {flagCount} {flagCount === 1 ? 'Flag' : 'Flags'}
                           </span>
+                          {isFlagged && (
+                            <span className={styles.viewIssuesLink}>
+                              <span>View Issues</span>
+                              <ChevronRight size={12} />
+                            </span>
+                          )}
                         </div>
                       </MagicBentoCard>
                     );
@@ -678,15 +1017,32 @@ export default function ReportPage() {
               </div>
             )}
 
-            {/* Tab 3: What-If Remediation Simulator */}
+            {/* Tab 3: What-If Remediation Simulator with Plain-English Status Shift & Green Delta Badges */}
             {activeTab === 'simulator' && (
               <div className={styles.simulatorContainer}>
                 <div className={styles.simCardTop}>
                   <div className={styles.simHeaderInfo}>
                     <h3 className={styles.matrixTitle}>Interactive What-If Remediation Simulator</h3>
                     <p className={styles.matrixDesc}>
-                      Simulate how applying proposed editorial fixes lowers release friction and qualifies for target &quot;{targetRatingGoal}&quot;:
+                      Simulate editorial fixes to lower release friction and verify target clearance status:
                     </p>
+
+                    {/* Plain-English Status Transition Banner */}
+                    <div className={styles.statusShiftContainer}>
+                      <div className={styles.statusShiftBadgeCurrent}>
+                        <span className={styles.statusShiftPrefix}>Status:</span>
+                        <span className={styles.statusShiftText}>{getCurrentStatusText()}</span>
+                      </div>
+                      <span className={styles.statusShiftArrow}>➔</span>
+                      <div
+                        className={`${styles.statusShiftBadgeProjected} ${
+                          hasAnyFixApplied ? styles.statusShiftProjectedActive : ''
+                        }`}
+                      >
+                        <span className={styles.statusShiftPrefix}>Projected:</span>
+                        <span className={styles.statusShiftText}>{getProjectedStatusText()}</span>
+                      </div>
+                    </div>
                   </div>
 
                   <div className={styles.simComparisonCard}>
@@ -705,11 +1061,20 @@ export default function ReportPage() {
                 <div className={styles.suggestionsList}>
                   {report.remediationSuggestions && report.remediationSuggestions.length > 0 ? (
                     report.remediationSuggestions.map((item, idx) => {
-                      const isChecked = !!appliedFixes[idx];
+                      const isChecked = Boolean(appliedFixes[idx]);
+                      const baseRisk = report.riskScore ?? 25;
+                      const targetScore = item.projectedRiskScore ?? Math.max(8, baseRisk - 14);
+                      const reductionDelta = Math.max(5, Math.round(baseRisk - targetScore));
+                      const linkedIssue = issuesList[idx];
+
                       return (
                         <div
                           key={idx}
                           onClick={() => toggleFix(idx)}
+                          onMouseEnter={() => {
+                            if (linkedIssue) setHoveredIssueId(linkedIssue.id);
+                          }}
+                          onMouseLeave={() => setHoveredIssueId(null)}
                           className={`${styles.suggestionItem} ${isChecked ? styles.suggestionChecked : ''}`}
                         >
                           <div className={styles.checkboxWrapper}>
@@ -718,14 +1083,22 @@ export default function ReportPage() {
                               checked={isChecked}
                               onChange={() => toggleFix(idx)}
                               className={styles.checkboxInput}
+                              id={`sim-check-${idx}`}
                             />
                           </div>
+
                           <div className={styles.suggestionContent}>
-                            <span className={styles.suggestionAction}>{item.action}</span>
-                            <span className={styles.suggestionImpact}>{item.impact}</span>
+                            <span className={styles.suggestionAction}>
+                              {sanitizeCoordinateText(item.action)}
+                            </span>
+                            <span className={styles.suggestionImpact}>
+                              {sanitizeCoordinateText(item.impact)}
+                            </span>
                           </div>
-                          <div className={styles.projectedPill}>
-                            Target: {item.projectedRiskScore}% Friction
+
+                          {/* Clear Green Reduction Delta Badge */}
+                          <div className={styles.deltaReductionBadge}>
+                            -{reductionDelta}% Friction
                           </div>
                         </div>
                       );

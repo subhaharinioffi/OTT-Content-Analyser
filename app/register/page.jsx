@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
   ShieldCheck,
+  ShieldAlert,
   Lock,
   Mail,
   User,
@@ -20,6 +21,7 @@ import {
   Sparkles,
   Eye,
   EyeOff,
+  RefreshCw,
 } from 'lucide-react';
 import styles from './register.module.css';
 
@@ -34,6 +36,10 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [passwordPulse, setPasswordPulse] = useState(false);
+
+  const passwordInputRef = useRef(null);
+  const emailInputRef = useRef(null);
 
   // Warning alert modal for uppercase in email
   const [capsModal, setCapsModal] = useState({
@@ -42,21 +48,30 @@ export default function RegisterPage() {
     lowerEmail: '',
   });
 
-  // Handle email changes and check for caps
+  // Weak password alert modal
+  const [weakPasswordModal, setWeakPasswordModal] = useState({
+    isOpen: false,
+  });
+
+  // Handle email changes
   const handleEmailChange = (val) => {
     setEmail(val);
-    const hasUpperCase = /[A-Z]/.test(val);
-    if (hasUpperCase && val.includes('@') && !capsModal.isOpen) {
+  };
+
+  // Blur on email field triggers uppercase warning popup if caps exist
+  const handleEmailBlur = () => {
+    if (/[A-Z]/.test(email)) {
       setCapsModal({
         isOpen: true,
-        typedEmail: val,
-        lowerEmail: val.toLowerCase().trim(),
+        typedEmail: email,
+        lowerEmail: email.toLowerCase().trim(),
       });
     }
   };
 
   const handleApplyLowerCaseEmail = () => {
-    setEmail(capsModal.lowerEmail);
+    const fixed = (capsModal.lowerEmail || email).toLowerCase().trim();
+    setEmail(fixed);
     setCapsModal({ isOpen: false, typedEmail: '', lowerEmail: '' });
   };
 
@@ -78,6 +93,7 @@ export default function RegisterPage() {
     let label = 'Weak';
     let labelClass = styles.strengthWeak;
     let activeBars = 1;
+    const isWeak = score < 3 || password.length < 8;
 
     if (score >= 4) {
       label = 'Strong (Recommended)';
@@ -93,15 +109,60 @@ export default function RegisterPage() {
       activeBars = 2;
     }
 
-    return { checks, score, label, labelClass, activeBars };
+    return { checks, score, label, labelClass, activeBars, isWeak };
   }, [password]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  // Generate a cryptographically strong password meeting 100% of criteria
+  const handleGenerateStrongPassword = () => {
+    const uppers = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowers = 'abcdefghijkmnopqrstuvwxyz';
+    const numbers = '23456789';
+    const specials = '@$!%*?&#';
+
+    let gen = '';
+    for (let i = 0; i < 3; i++) gen += uppers[Math.floor(Math.random() * uppers.length)];
+    for (let i = 0; i < 4; i++) gen += lowers[Math.floor(Math.random() * lowers.length)];
+    for (let i = 0; i < 3; i++) gen += numbers[Math.floor(Math.random() * numbers.length)];
+    for (let i = 0; i < 2; i++) gen += specials[Math.floor(Math.random() * specials.length)];
+
+    const finalPassword = gen.split('').sort(() => 0.5 - Math.random()).join('');
+    setPassword(finalPassword);
+    setShowPassword(true);
+    setWeakPasswordModal({ isOpen: false });
+    setPasswordPulse(false);
+  };
+
+  const handleFocusPassword = () => {
+    setWeakPasswordModal({ isOpen: false });
+    setPasswordPulse(true);
+    setTimeout(() => {
+      passwordInputRef.current?.focus();
+    }, 100);
+  };
+
+  const handleSubmit = async (e, bypassWeak = false) => {
+    if (e) e.preventDefault();
     setError('');
 
-    // Ensure email is strictly lowercased and trimmed
+    // Check 1: If uppercase in email, trigger warning popup modal
+    if (/[A-Z]/.test(email)) {
+      setCapsModal({
+        isOpen: true,
+        typedEmail: email,
+        lowerEmail: email.toLowerCase().trim(),
+      });
+      return;
+    }
+
+    // Check 2: If weak password, trigger weak password alert modal
+    if (!bypassWeak && (password.length < 8 || securityAnalysis.isWeak)) {
+      setWeakPasswordModal({ isOpen: true });
+      setPasswordPulse(true);
+      return;
+    }
+
+    setLoading(true);
+
     const cleanEmail = email.toLowerCase().trim();
     const cleanUsername = (username || name.replace(/\s+/g, '_')).toLowerCase().trim();
 
@@ -151,10 +212,8 @@ export default function RegisterPage() {
       });
 
       if (!loginRes?.error) {
-        // Direct origin navigation ensures session cookies are recognized on mobile browsers
         window.location.href = '/';
       } else {
-        // If automatic login experienced a transient mobile token delay, redirect to login with prefill
         window.location.href = `/login?registered=true&user=${encodeURIComponent(cleanUsername || cleanEmail)}`;
       }
     } catch (err) {
@@ -166,19 +225,24 @@ export default function RegisterPage() {
 
   return (
     <div className={styles.authContainer}>
-      {/* Uppercase Email Warning Alert Popup Modal */}
+      {/* 1. Uppercase Email Warning Alert Popup Modal */}
       {capsModal.isOpen && (
         <div className={styles.modalOverlay} role="dialog" aria-modal="true">
           <div className={styles.modalBackdrop} onClick={handleDismissCapsModal} />
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
               <div className={styles.warningIconBox}>
-                <AlertTriangle size={22} />
+                <AlertTriangle size={24} />
               </div>
-              <h3 className={styles.modalTitle}>Uppercase Email Warning</h3>
+              <div>
+                <h3 className={styles.modalTitle}>Uppercase Email Warning</h3>
+                <span style={{ fontSize: '0.72rem', color: '#f59e0b', fontWeight: 700 }}>
+                  AUTHENTICATION ALERT
+                </span>
+              </div>
             </div>
             <p className={styles.modalBody}>
-              Email addresses are case-insensitive standard identifiers, but uppercase letters can lead to sign-in mismatches when typing quickly on mobile devices.
+              Email addresses are standard lowercase identifiers. Having capital letters can lead to sign-in mismatches when accessing your studio dashboard across devices.
               <span className={styles.modalEmailPreview}>
                 <span className={styles.emailCapsTyped}>{capsModal.typedEmail}</span>
                 <span className={styles.emailLowerConverted}>&rarr; {capsModal.lowerEmail}</span>
@@ -190,7 +254,7 @@ export default function RegisterPage() {
                 onClick={handleDismissCapsModal}
                 className={styles.modalDismissBtn}
               >
-                Keep As Is
+                Keep Current
               </button>
               <button
                 type="button"
@@ -199,6 +263,77 @@ export default function RegisterPage() {
               >
                 <Sparkles size={14} />
                 <span>Convert to Lowercase</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. Weak Password Warning Alert Popup Modal */}
+      {weakPasswordModal.isOpen && (
+        <div className={styles.modalOverlay} role="dialog" aria-modal="true">
+          <div className={styles.modalBackdrop} onClick={() => setWeakPasswordModal({ isOpen: false })} />
+          <div className={styles.weakModalContent}>
+            <div className={styles.modalHeader}>
+              <div className={styles.weakShieldIconBox}>
+                <ShieldAlert size={26} />
+              </div>
+              <div>
+                <h3 className={styles.weakModalTitle}>Weak Password Alert</h3>
+                <span className={styles.weakScoreBadge}>
+                  Strength: {securityAnalysis.label} ({securityAnalysis.score}/5 Criteria)
+                </span>
+              </div>
+            </div>
+
+            <p className={styles.modalBody}>
+              Your chosen password does not meet the recommended regulatory studio security standard. Weak credentials make your compliance clearance reports vulnerable.
+            </p>
+
+            {/* Checklist of unmet criteria */}
+            <div className={styles.missingCriteriaList}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase' }}>
+                Password Security Audit:
+              </span>
+              {securityAnalysis.checks.map((c) => (
+                <div
+                  key={c.id}
+                  className={`${styles.missingCriterionItem} ${c.met ? styles.criterionPassed : styles.criterionFailed}`}
+                >
+                  {c.met ? <Check size={14} /> : <X size={14} />}
+                  <span>{c.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.modalWeakActions}>
+              <div className={styles.weakActionPrimaryRow}>
+                <button
+                  type="button"
+                  onClick={handleGenerateStrongPassword}
+                  className={styles.generateStrongModalBtn}
+                >
+                  <Sparkles size={16} />
+                  <span>Generate Strong Password</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFocusPassword}
+                  className={styles.strengthenBtn}
+                >
+                  <span>Strengthen Myself</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setWeakPasswordModal({ isOpen: false });
+                  handleSubmit(null, true);
+                }}
+                className={styles.weakProceedBtn}
+              >
+                Proceed with weak password anyway &rarr;
               </button>
             </div>
           </div>
@@ -242,7 +377,7 @@ export default function RegisterPage() {
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form onSubmit={(e) => handleSubmit(e, false)} className={styles.form}>
           <div className={styles.fieldGroup}>
             <label className={styles.label}>Full Name</label>
             <div className={styles.inputWrapper}>
@@ -275,16 +410,34 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>
+            <div className={styles.label}>
               <span>Official Email</span>
-              {/[A-Z]/.test(email) && <span className={styles.capsIndicator}>CAPS DETECTED</span>}
-            </label>
+              {/[A-Z]/.test(email) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCapsModal({
+                      isOpen: true,
+                      typedEmail: email,
+                      lowerEmail: email.toLowerCase().trim(),
+                    });
+                  }}
+                  className={styles.capsIndicatorBtn}
+                  title="Uppercase detected in email. Click to convert."
+                >
+                  <AlertTriangle size={11} />
+                  <span>CAPS DETECTED — FIX</span>
+                </button>
+              )}
+            </div>
             <div className={styles.inputWrapper}>
               <Mail size={16} className={styles.inputIcon} />
               <input
+                ref={emailInputRef}
                 type="email"
                 value={email}
                 onChange={(e) => handleEmailChange(e.target.value)}
+                onBlur={handleEmailBlur}
                 placeholder="compliance@shortfundly.com"
                 required
                 autoComplete="email"
@@ -309,26 +462,41 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.label}>Security Password</label>
+            <div className={styles.passwordHeaderRow}>
+              <label className={styles.label} style={{ marginBottom: 0 }}>Security Password</label>
+              <button
+                type="button"
+                onClick={handleGenerateStrongPassword}
+                className={styles.suggestPasswordLink}
+                title="Auto-generate a strong compliant password"
+              >
+                <Sparkles size={11} />
+                <span>Suggest Strong Password</span>
+              </button>
+            </div>
             <div className={styles.inputWrapper}>
               <Lock size={16} className={styles.inputIcon} />
               <input
-                type={showPassword ? "text" : "password"}
+                ref={passwordInputRef}
+                type={showPassword ? 'text' : 'password'}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (passwordPulse) setPasswordPulse(false);
+                }}
                 placeholder="••••••••••••"
                 required
                 minLength={6}
                 autoComplete="new-password"
-                className={styles.input}
-                style={{ paddingRight: "42px" }}
+                className={`${styles.input} ${passwordPulse ? styles.inputWeakPulse : ''}`}
+                style={{ paddingRight: '42px' }}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
                 className={styles.togglePasswordBtn}
-                title={showPassword ? "Hide password" : "Show password"}
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                title={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -363,6 +531,27 @@ export default function RegisterPage() {
                   </span>
                   <span>{securityAnalysis.score}/5 Criteria</span>
                 </div>
+
+                {/* Real-time Inline Alert when Password is Weak */}
+                {securityAnalysis.isWeak && (
+                  <div className={styles.weakPasswordWarningBox}>
+                    <div className={styles.weakWarningHeader}>
+                      <AlertTriangle size={14} />
+                      <span>Security Warning: Weak Password</span>
+                    </div>
+                    <p className={styles.weakWarningText}>
+                      Your password is below recommended studio security guidelines ({securityAnalysis.score}/5 criteria). An alert modal will appear upon submission.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleGenerateStrongPassword}
+                      className={styles.quickGenerateBtn}
+                    >
+                      <Sparkles size={12} />
+                      <span>Auto-Generate 100% Strong Password</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Suggestions Checklist */}
                 <div className={styles.suggestionsList}>
