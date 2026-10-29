@@ -21,6 +21,7 @@ import {
   RefreshCw,
   ShieldCheck,
   User,
+  Trash2,
 } from 'lucide-react';
 import ReflectiveCard from '@/components/ReflectiveCard';
 import MagicBentoCard from '@/components/MagicBentoCard';
@@ -44,10 +45,17 @@ export default function DashboardPage() {
   });
   const [loading, setLoading] = useState(true);
 
+  const activeUserEmail =
+    session?.user?.email ||
+    (session?.user?.username ? `${session.user.username}@cinecomply.io` : session?.user?.name ? `${session.user.name.toLowerCase().replace(/\s+/g, '')}@cinecomply.io` : '');
+
   const fetchReports = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/reports');
+      const url = activeUserEmail
+        ? `/api/reports?userEmail=${encodeURIComponent(activeUserEmail)}`
+        : '/api/reports';
+      const res = await fetch(url);
       const data = await res.json();
       if (data.reports) {
         setReports(data.reports);
@@ -60,9 +68,31 @@ export default function DashboardPage() {
     }
   };
 
+  const handleCleanQueue = async () => {
+    if (!activeUserEmail) return;
+    const confirmed = window.confirm(
+      'Are you sure you want to clean your regulatory audit queue? This will permanently delete your stored compliance records.'
+    );
+    if (!confirmed) return;
+
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/reports?userEmail=${encodeURIComponent(activeUserEmail)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await fetchReports();
+      }
+    } catch (err) {
+      console.error('Failed to clean queue:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchReports();
-  }, []);
+  }, [activeUserEmail]);
 
   const getFormatIcon = (format) => {
     switch (format) {
@@ -278,13 +308,28 @@ export default function DashboardPage() {
             <div>
               <h2 className={styles.sectionTitle}>Regulatory Audit Queue</h2>
               <p className={styles.sectionDesc}>
-                Real-time censorship and compliance records stored in MongoDB Atlas
+                {activeUserEmail
+                  ? `Authenticated personal queue for ${activeUserEmail}`
+                  : 'Personal regulatory audit records for your account'}
               </p>
             </div>
-            <Link href="/submit" className={styles.quickUploadLink}>
-              <UploadCloud size={16} />
-              <span>Submit Media</span>
-            </Link>
+            <div className={styles.headerActionGroup}>
+              {reports.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleCleanQueue}
+                  className={styles.cleanQueueBtn}
+                  title="Clear all records in your personal queue"
+                >
+                  <Trash2 size={14} />
+                  <span>Clean My Queue</span>
+                </button>
+              )}
+              <Link href="/submit" className={styles.quickUploadLink}>
+                <UploadCloud size={16} />
+                <span>Submit Media</span>
+              </Link>
+            </div>
           </div>
 
           {loading ? (

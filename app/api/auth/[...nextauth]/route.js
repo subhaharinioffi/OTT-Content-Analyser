@@ -86,6 +86,7 @@ export const authOptions = {
         token.id = user.id;
         token.username = user.username;
         token.name = user.name;
+        token.email = user.email;
         token.role = user.role;
         token.organization = user.organization;
       }
@@ -96,6 +97,7 @@ export const authOptions = {
         session.user.id = token.id;
         session.user.username = token.username || token.name;
         session.user.name = token.name;
+        session.user.email = token.email || session.user.email;
         session.user.role = token.role;
         session.user.organization = token.organization;
       }

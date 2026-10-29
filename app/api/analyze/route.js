@@ -63,10 +63,11 @@ export async function POST(request) {
       console.log(`[Analyze API Multipart] Processing file "${title}", size: ${(fileSize / 1024 / 1024).toFixed(2)} MB`);
 
       // Upload buffer to Cloudinary
+      const safeSlug = title.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/^_+|_+$/g, '') || 'asset';
       try {
         const cloudinaryResult = await uploadToCloudinary(buffer, {
           resource_type: 'auto',
-          public_id: `ott_${Date.now()}_${title.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+          public_id: `ott_${Date.now()}_${safeSlug}`,
         });
         cloudinaryUrl = cloudinaryResult.secure_url;
         publicId = cloudinaryResult.public_id;
@@ -124,6 +125,10 @@ export async function POST(request) {
       officialContentDescriptor: complianceAnalysis.officialContentDescriptor,
       summary: complianceAnalysis.executiveSummary || complianceAnalysis.summary,
       executiveSummary: complianceAnalysis.executiveSummary || complianceAnalysis.summary,
+      overallSummary: complianceAnalysis.overallSummary || complianceAnalysis.summary,
+      contentReview: complianceAnalysis.contentReview,
+      contentFlags: complianceAnalysis.contentFlags,
+      suggestions: complianceAnalysis.suggestions,
       themeMatrix: complianceAnalysis.themeMatrix || [],
       descriptors: complianceAnalysis.descriptors || {},
       pinpointedIssues: complianceAnalysis.pinpointedIssues || [],

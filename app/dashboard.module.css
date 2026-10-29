@@ -468,6 +468,33 @@
   color: var(--text-secondary);
 }
 
+.headerActionGroup {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cleanQueueBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cleanQueueBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  transform: translateY(-1px);
+}
+
 .quickUploadLink {
   display: inline-flex;
   align-items: center;

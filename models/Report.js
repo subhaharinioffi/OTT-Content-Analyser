@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { connectToDatabase, isDbFallback, getLocalCollection, saveLocalCollection } from '@/lib/mongodb';
-import { saveReportToCloud, getCloudReportById, getCloudReports } from '@/lib/cloudStorage';
+import { saveReportToCloud, getCloudReportById, getCloudReports, uploadRawJson, updateCloudReportsIndex } from '@/lib/cloudStorage';
 import crypto from 'crypto';
 
 const ReportSchema = new mongoose.Schema(
@@ -30,6 +30,10 @@ const ReportSchema = new mongoose.Schema(
     officialContentDescriptor: { type: String },
     summary: { type: String, required: true },
     executiveSummary: { type: String },
+    overallSummary: { type: String },
+    contentReview: { type: mongoose.Schema.Types.Mixed },
+    contentFlags: { type: mongoose.Schema.Types.Mixed },
+    suggestions: { type: mongoose.Schema.Types.Mixed },
     themeMatrix: [
       {
         themeId: String,
@@ -94,7 +98,7 @@ const ReportSchema = new mongoose.Schema(
       },
     ],
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
 const MongooseReport = mongoose.models.Report || mongoose.model('Report', ReportSchema);
@@ -105,18 +109,43 @@ export const ReportModel = {
     if (!isDbFallback()) {
       try {
         const found = await MongooseReport.find(filter).sort({ createdAt: -1 });
-        if (found && found.length > 0) return found;
+        if (found) return found;
       } catch (err) {
         console.warn('[ReportModel] Mongoose find error:', err.message);
       }
     }
     // Always fall back to cloud persistent storage
     const cloudReports = await getCloudReports();
-    if (cloudReports && cloudReports.length > 0) {
-      return cloudReports;
+    let reports = cloudReports && cloudReports.length > 0 ? [...cloudReports] : [...getLocalCollection('reports')];
+
+    // Filter by userEmail if specified
+    if (filter && filter.userEmail) {
+      const target = filter.userEmail.toLowerCase().trim();
+      reports = reports.filter((r) => (r.userEmail || '').toLowerCase().trim() === target);
     }
-    const local = getLocalCollection('reports');
-    return local.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return reports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  },
+
+  async deleteMany(filter = {}) {
+    await connectToDatabase();
+    if (!isDbFallback()) {
+      try {
+        await MongooseReport.deleteMany(filter);
+      } catch (err) {
+        console.warn('[ReportModel] Mongoose deleteMany error:', err.message);
+      }
+    }
+    let reports = await getCloudReports();
+    if (filter && filter.userEmail) {
+      const target = filter.userEmail.toLowerCase().trim();
+      reports = reports.filter((r) => (r.userEmail || '').toLowerCase().trim() !== target);
+    } else {
+      reports = [];
+    }
+    await updateCloudReportsIndex(reports);
+    saveLocalCollection('reports', reports);
+    return true;
   },
 
   async findById(id) {

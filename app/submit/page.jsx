@@ -360,40 +360,39 @@ export default function SubmitPage() {
     try {
       let cloudinaryUrl = '';
       let publicId = '';
+      const activeUserEmail =
+        session?.user?.email ||
+        (session?.user?.username ? `${session.user.username}@cinecomply.io` : session?.user?.name ? `${session.user.name.toLowerCase().replace(/\s+/g, '')}@cinecomply.io` : 'creator@cinema.io');
 
-      // Direct client upload to Cloudinary for large files or videos/audio
-      // This bypasses Vercel's strict 4.5 MB serverless body payload limit
-      const isLargeOrVideo = file.size > 3.5 * 1024 * 1024 || !file.type.startsWith('image/');
-
-      if (isLargeOrVideo) {
+      // Attempt direct client-to-Cloudinary upload for seamless upload speed and no serverless body limits
+      try {
         const signRes = await fetch('/api/cloudinary-sign', { method: 'POST' });
-        const signData = await signRes.json();
-        if (!signRes.ok) {
-          throw new Error('Could not authorize secure CDN media upload.');
-        }
+        if (signRes.ok) {
+          const signData = await signRes.json();
+          const cloudForm = new FormData();
+          cloudForm.append('file', file);
+          cloudForm.append('api_key', signData.apiKey);
+          cloudForm.append('timestamp', signData.timestamp.toString());
+          cloudForm.append('signature', signData.signature);
+          cloudForm.append('folder', signData.folder);
 
-        const cloudForm = new FormData();
-        cloudForm.append('file', file);
-        cloudForm.append('api_key', signData.apiKey);
-        cloudForm.append('timestamp', signData.timestamp.toString());
-        cloudForm.append('signature', signData.signature);
-        cloudForm.append('folder', signData.folder);
+          const cloudRes = await fetch(
+            `https://api.cloudinary.com/v1_1/${signData.cloudName}/auto/upload`,
+            {
+              method: 'POST',
+              body: cloudForm,
+            }
+          );
 
-        const cloudRes = await fetch(
-          `https://api.cloudinary.com/v1_1/${signData.cloudName}/auto/upload`,
-          {
-            method: 'POST',
-            body: cloudForm,
+          if (cloudRes.ok) {
+            const cloudResult = await cloudRes.json();
+            cloudinaryUrl = cloudResult.secure_url;
+            publicId = cloudResult.public_id;
+            console.log('[Upload Studio] Direct Cloudinary CDN upload success:', cloudinaryUrl);
           }
-        );
-
-        const cloudResult = await cloudRes.json();
-        if (!cloudRes.ok) {
-          throw new Error(cloudResult.error?.message || 'Media CDN upload failed.');
         }
-
-        cloudinaryUrl = cloudResult.secure_url;
-        publicId = cloudResult.public_id;
+      } catch (cloudErr) {
+        console.warn('[Upload Studio] Direct Cloudinary upload skipped, falling back to direct server ingest:', cloudErr);
       }
 
       let res;
@@ -409,7 +408,7 @@ export default function SubmitPage() {
             targetRatingGoal,
             aspectRatio,
             duration: fileDuration,
-            userEmail: session?.user?.email || 'creator@cinema.io',
+            userEmail: activeUserEmail,
             cloudinaryUrl,
             publicId,
             fileSize: file.size,
@@ -424,7 +423,7 @@ export default function SubmitPage() {
         formData.append('targetRatingGoal', targetRatingGoal);
         formData.append('aspectRatio', aspectRatio);
         formData.append('duration', fileDuration.toString());
-        formData.append('userEmail', session?.user?.email || 'creator@cinema.io');
+        formData.append('userEmail', activeUserEmail);
 
         res = await fetch('/api/analyze', {
           method: 'POST',
@@ -433,16 +432,22 @@ export default function SubmitPage() {
       }
 
       clearInterval(interval);
-      let data;
+
+      // Read response stream safely ONCE to avoid 'Failed to execute text on Response: body stream already read'
+      const rawText = await res.text();
+      let data = null;
       try {
-        data = await res.json();
-      } catch (jsonErr) {
-        const text = await res.text();
-        throw new Error(text || 'Regulatory service returned an unexpected response format.');
+        data = JSON.parse(rawText);
+      } catch (parseErr) {
+        console.warn('[Upload Studio] Non-JSON response received:', rawText.slice(0, 300));
       }
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Regulatory compliance analysis failed.');
+      if (!res.ok || !data?.success) {
+        const errorMsg =
+          data?.error ||
+          (rawText && !rawText.startsWith('<') ? rawText.slice(0, 300) : null) ||
+          `Regulatory screening failed (Server status ${res.status}). Please verify media file or try again.`;
+        throw new Error(errorMsg);
       }
 
       setCurrentStage(ANALYSIS_STAGES.length - 1);
