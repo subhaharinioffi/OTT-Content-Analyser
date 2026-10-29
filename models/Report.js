@@ -34,6 +34,7 @@ const ReportSchema = new mongoose.Schema(
     contentReview: { type: mongoose.Schema.Types.Mixed },
     contentFlags: { type: mongoose.Schema.Types.Mixed },
     suggestions: { type: mongoose.Schema.Types.Mixed },
+    videoFrames: { type: mongoose.Schema.Types.Mixed },
     themeMatrix: [
       {
         themeId: String,

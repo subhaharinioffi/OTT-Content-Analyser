@@ -132,6 +132,7 @@ export async function POST(request) {
       contentReview: complianceAnalysis.contentReview,
       contentFlags: complianceAnalysis.contentFlags,
       suggestions: complianceAnalysis.suggestions,
+      videoFrames: Array.isArray(videoFrames) ? videoFrames.slice(0, 12) : [],
       themeMatrix: complianceAnalysis.themeMatrix || [],
       descriptors: complianceAnalysis.descriptors || {},
       pinpointedIssues: complianceAnalysis.pinpointedIssues || [],

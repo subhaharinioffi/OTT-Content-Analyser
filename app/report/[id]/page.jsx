@@ -220,6 +220,7 @@ function normalizeReportData(report) {
     contentReview,
     contentFlags,
     suggestions,
+    videoFrames: Array.isArray(report.videoFrames) ? report.videoFrames : [],
     assignedRating: report.assignedRating || report.ageClassification || 'U/A 13+',
     complianceScore: typeof report.complianceScore === 'number' ? report.complianceScore : 88,
     riskScore: typeof report.riskScore === 'number' ? report.riskScore : 12,
@@ -282,8 +283,9 @@ export default function ReportPage() {
   };
 
   /**
-   * Smoothly navigates to the Media Inspector and highlights the exact flagged issue
-   * with coordinate-based bounding box overlay on posters or scene HUD for videos.
+   * Smoothly navigates to the Media Inspector and highlights the exact flagged issue.
+   * For video assets, pulls the extracted scene keyframe from that exact timestamp
+   * and renders the bounding box overlay directly over the scene.
    */
   const handleInspectIssue = (flag) => {
     if (!flag) return;
@@ -307,6 +309,32 @@ export default function ReportPage() {
       }
     }
 
+    // Match exact or closest movie scene keyframe
+    let sceneFrameSrc = null;
+    let sceneFrameTime = flag.timestamp;
+    if (Array.isArray(report?.videoFrames) && report.videoFrames.length > 0) {
+      const match = (flag.timestamp || '').match(/(\d+):(\d+)/);
+      if (match) {
+        const targetSec = parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+        let closest = report.videoFrames[0];
+        let minDiff = Infinity;
+        for (const f of report.videoFrames) {
+          const sec = typeof f.secondOffset === 'number' ? f.secondOffset : 0;
+          const diff = Math.abs(sec - targetSec);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closest = f;
+          }
+        }
+        if (closest && closest.data) {
+          sceneFrameSrc = `data:image/jpeg;base64,${closest.data}`;
+          sceneFrameTime = closest.timestamp || flag.timestamp;
+        }
+      } else if (report.videoFrames[0]?.data) {
+        sceneFrameSrc = `data:image/jpeg;base64,${report.videoFrames[0].data}`;
+      }
+    }
+
     setActiveHighlight({
       category: flag.category,
       severity: flag.severity,
@@ -315,6 +343,8 @@ export default function ReportPage() {
       timestamp: flag.timestamp,
       regionLabel: box?.regionLabel || flag.timestamp || 'Central Visual Focus',
       box: box || { ymin: 250, xmin: 250, ymax: 750, xmax: 750, regionLabel: 'Central Visual Focus' },
+      sceneFrame: sceneFrameSrc,
+      sceneFrameTime: sceneFrameTime,
     });
 
     // If timestamp has minutes/seconds, seek the video
@@ -1048,9 +1078,19 @@ export default function ReportPage() {
 
               {/* Viewport */}
               <div className={`${styles.viewport} ${isVertical ? styles.viewportVertical : styles.viewportWidescreen}`}>
-                {isPoster || report.mediaUrl?.match(/\.(jpeg|jpg|png|webp)/i) ? (
+                {activeHighlight?.sceneFrame || isPoster || report.mediaUrl?.match(/\.(jpeg|jpg|png|webp)/i) ? (
                   <div className={styles.posterViewportContainer}>
-                    <img src={report.mediaUrl} alt={report.title} className={styles.mediaPosterImg} />
+                    {activeHighlight?.sceneFrame && (
+                      <div className={styles.sceneBannerBadge}>
+                        <Film size={12} />
+                        <span>Movie Scene Frame ({activeHighlight.sceneFrameTime || activeHighlight.timestamp})</span>
+                      </div>
+                    )}
+                    <img
+                      src={activeHighlight?.sceneFrame || report.mediaUrl}
+                      alt={activeHighlight?.sceneFrame ? `Scene at ${activeHighlight.timestamp}` : report.title}
+                      className={styles.mediaPosterImg}
+                    />
                     {activeHighlight && (
                       <div className={styles.overlayWrapper}>
                         <svg
