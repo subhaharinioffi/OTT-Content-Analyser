@@ -46,12 +46,115 @@ const CONTENT_TYPES = [
 ];
 
 const ANALYSIS_STAGES = [
-  'Uploading asset to Cloudinary Storage CDN...',
+  'Extracting timeline keyframes & generating preview...',
+  'Syncing asset to Cloudinary Storage CDN...',
   'Ingesting media into Google Gemini Multimodal Engine...',
   'Evaluating visual & audio signals against CBFC & OTT Rules...',
-  'Screening 7 mandatory content descriptors & timeline flags...',
+  'Screening statutory content flags & scene evidence...',
   'Synthesizing certification report & persisting in MongoDB Atlas...',
 ];
+
+/**
+ * Samples keyframes across video timeline and generates a poster thumbnail blob
+ * Enables instant analysis for videos of ANY length or file size (including 2+ hour full movies)
+ */
+async function extractVideoKeyframesAndThumbnail(file, numFrames = 8) {
+  return new Promise((resolve) => {
+    try {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      const url = URL.createObjectURL(file);
+      video.src = url;
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const frames = [];
+      let thumbnailBlob = null;
+
+      let isResolved = false;
+      const finish = () => {
+        if (isResolved) return;
+        isResolved = true;
+        try {
+          URL.revokeObjectURL(url);
+        } catch (_) {}
+        resolve({ frames, thumbnailBlob });
+      };
+
+      // Safety timeout after 14s
+      const timeoutId = setTimeout(finish, 14000);
+
+      video.onloadedmetadata = async () => {
+        try {
+          const dur = video.duration || 60;
+          const width = 480;
+          const height = Math.round(width * (video.videoHeight / (video.videoWidth || 1))) || 270;
+          canvas.width = width;
+          canvas.height = height;
+
+          // Target timestamps spread across the entire movie timeline
+          const step = dur / (numFrames + 1);
+          const targetTimes = [];
+          for (let i = 1; i <= numFrames; i++) {
+            targetTimes.push(Math.min(Math.max(0.5, step * i), Math.max(0.5, dur - 1)));
+          }
+
+          for (let idx = 0; idx < targetTimes.length; idx++) {
+            const t = targetTimes[idx];
+            await new Promise((resSeek) => {
+              const onSeeked = () => {
+                video.removeEventListener('seeked', onSeeked);
+                try {
+                  ctx.drawImage(video, 0, 0, width, height);
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+                  const m = Math.floor(t / 60);
+                  const s = Math.floor(t % 60);
+                  const timeLabel = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                  frames.push({
+                    timestamp: timeLabel,
+                    secondOffset: Math.round(t),
+                    data: dataUrl.split(',')[1],
+                    mimeType: 'image/jpeg',
+                  });
+                } catch (err) {
+                  console.warn('Frame grab error:', err);
+                }
+                resSeek();
+              };
+              video.addEventListener('seeked', onSeeked);
+              video.currentTime = t;
+            });
+          }
+
+          // Generate single high-res thumbnail blob for Cloudinary poster
+          try {
+            canvas.toBlob((blob) => {
+              thumbnailBlob = blob;
+              clearTimeout(timeoutId);
+              finish();
+            }, 'image/jpeg', 0.85);
+          } catch (_) {
+            clearTimeout(timeoutId);
+            finish();
+          }
+        } catch (err) {
+          console.warn('Video extraction error:', err);
+          clearTimeout(timeoutId);
+          finish();
+        }
+      };
+
+      video.onerror = () => {
+        clearTimeout(timeoutId);
+        finish();
+      };
+    } catch (e) {
+      resolve({ frames: [], thumbnailBlob: null });
+    }
+  });
+}
 
 export default function SubmitPage() {
   const router = useRouter();
@@ -360,17 +463,35 @@ export default function SubmitPage() {
     try {
       let cloudinaryUrl = '';
       let publicId = '';
+      let videoFrames = [];
       const activeUserEmail =
         session?.user?.email ||
         (session?.user?.username ? `${session.user.username}@cinecomply.io` : session?.user?.name ? `${session.user.name.toLowerCase().replace(/\s+/g, '')}@cinecomply.io` : 'creator@cinema.io');
 
-      // Attempt direct client-to-Cloudinary upload for seamless upload speed and no serverless body limits
+      const isVideoAsset = ['Movie', 'Short Film', 'Short Video (Reels)'].includes(contentType);
+      const isLargeVideo = isVideoAsset && file.size > 25 * 1024 * 1024; // > 25MB (e.g. 2hr full movie)
+
+      // Step A: Extract timeline keyframes and high-res poster thumbnail for video assets
+      let thumbnailBlob = null;
+      if (isVideoAsset) {
+        console.log(`[Upload Studio] Extracting timeline keyframes for ${contentType} (${(file.size / 1024 / 1024).toFixed(1)} MB)...`);
+        const extracted = await extractVideoKeyframesAndThumbnail(file, isLargeVideo ? 10 : 8);
+        videoFrames = extracted.frames;
+        thumbnailBlob = extracted.thumbnailBlob;
+        console.log(`[Upload Studio] Successfully captured ${videoFrames.length} keyframes across the timeline.`);
+      }
+
+      // Step B: Cloudinary CDN Storage
+      // For large movies (>25MB), upload the lightweight thumbnail (~50KB) to Cloudinary to guarantee instantaneous CDN hosting
+      // without hitting Cloudinary free-tier 100MB video caps or slow broadband bottlenecks.
+      const fileToUploadToCloudinary = (isLargeVideo && thumbnailBlob) ? thumbnailBlob : file;
+
       try {
         const signRes = await fetch('/api/cloudinary-sign', { method: 'POST' });
         if (signRes.ok) {
           const signData = await signRes.json();
           const cloudForm = new FormData();
-          cloudForm.append('file', file);
+          cloudForm.append('file', fileToUploadToCloudinary);
           cloudForm.append('api_key', signData.apiKey);
           cloudForm.append('timestamp', signData.timestamp.toString());
           cloudForm.append('signature', signData.signature);
@@ -388,15 +509,48 @@ export default function SubmitPage() {
             const cloudResult = await cloudRes.json();
             cloudinaryUrl = cloudResult.secure_url;
             publicId = cloudResult.public_id;
-            console.log('[Upload Studio] Direct Cloudinary CDN upload success:', cloudinaryUrl);
+            console.log('[Upload Studio] Cloudinary upload success:', cloudinaryUrl);
           }
         }
       } catch (cloudErr) {
-        console.warn('[Upload Studio] Direct Cloudinary upload skipped, falling back to direct server ingest:', cloudErr);
+        console.warn('[Upload Studio] Cloudinary upload fallback triggered:', cloudErr);
+      }
+
+      // Fallback: If Cloudinary direct upload failed on a large video, upload thumbnailBlob as a second attempt
+      if (!cloudinaryUrl && thumbnailBlob) {
+        try {
+          const signRes = await fetch('/api/cloudinary-sign', { method: 'POST' });
+          if (signRes.ok) {
+            const signData = await signRes.json();
+            const cloudForm = new FormData();
+            cloudForm.append('file', thumbnailBlob);
+            cloudForm.append('api_key', signData.apiKey);
+            cloudForm.append('timestamp', signData.timestamp.toString());
+            cloudForm.append('signature', signData.signature);
+            cloudForm.append('folder', signData.folder);
+
+            const cloudRes = await fetch(
+              `https://api.cloudinary.com/v1_1/${signData.cloudName}/auto/upload`,
+              { method: 'POST', body: cloudForm }
+            );
+            if (cloudRes.ok) {
+              const resData = await cloudRes.json();
+              cloudinaryUrl = resData.secure_url;
+              publicId = resData.public_id;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // If still no Cloudinary URL for poster, use a default high-res asset thumbnail
+      if (!cloudinaryUrl && isVideoAsset) {
+        cloudinaryUrl = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?auto=format&fit=crop&w=1200&q=80';
       }
 
       let res;
-      if (cloudinaryUrl) {
+      // CRITICAL: NEVER send raw multi-MB file to Vercel via FormData (> 4.5MB triggers PAYLOAD_TOO_LARGE).
+      // Always use lightweight JSON payload (< 300KB) when we have Cloudinary URL, videoFrames, or file > 4MB.
+      if (cloudinaryUrl || isVideoAsset || file.size > 4 * 1024 * 1024) {
         res = await fetch('/api/analyze', {
           method: 'POST',
           headers: {
@@ -409,13 +563,15 @@ export default function SubmitPage() {
             aspectRatio,
             duration: fileDuration,
             userEmail: activeUserEmail,
-            cloudinaryUrl,
+            cloudinaryUrl: cloudinaryUrl || filePreview,
             publicId,
             fileSize: file.size,
-            mimeType: file.type || 'video/mp4',
+            mimeType: file.type || (isVideoAsset ? 'video/mp4' : 'image/jpeg'),
+            videoFrames,
           }),
         });
       } else {
+        // Safe only for very small files (< 4MB)
         const formData = new FormData();
         formData.append('file', file);
         formData.append('title', title.trim());

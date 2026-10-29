@@ -19,10 +19,11 @@ export async function POST(request) {
     let fileSize = 0;
     let buffer = null;
     let mimeType = 'video/mp4';
+    let videoFrames = [];
 
     const contentTypeHeader = request.headers.get('content-type') || '';
 
-    // Handle JSON payload (from Direct Client-to-Cloudinary upload)
+    // Handle JSON payload (from Direct Client-to-Cloudinary upload or extracted frames)
     if (contentTypeHeader.includes('application/json')) {
       const jsonBody = await request.json();
       title = jsonBody.title || title;
@@ -35,8 +36,9 @@ export async function POST(request) {
       publicId = jsonBody.publicId || '';
       fileSize = jsonBody.fileSize || 0;
       mimeType = jsonBody.mimeType || mimeType;
+      videoFrames = Array.isArray(jsonBody.videoFrames) ? jsonBody.videoFrames : [];
 
-      console.log(`[Analyze API JSON] Processing "${title}" (${contentType}), Cloudinary URL: ${cloudinaryUrl}`);
+      console.log(`[Analyze API JSON] Processing "${title}" (${contentType}), Cloudinary URL: ${cloudinaryUrl}, Frames: ${videoFrames.length}`);
     } else {
       // Handle Multipart Form Data payload (fallback for small files / images)
       const formData = await request.formData();
@@ -102,6 +104,7 @@ export async function POST(request) {
       duration: duration,
       cloudinaryUrl: cloudinaryUrl,
       targetRatingGoal: targetRatingGoal,
+      videoFrames: videoFrames,
     });
 
     // Step 3: Persist Compliance Report in MongoDB Atlas & Cloud Storage

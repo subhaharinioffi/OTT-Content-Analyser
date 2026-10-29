@@ -1315,3 +1315,318 @@
 .backBtn:hover {
   background: rgba(255, 255, 255, 0.16);
 }
+
+/* ========================================================= */
+/* INTERACTIVE EVIDENCE PINPOINT & HIGHLIGHT OVERLAYS */
+/* ========================================================= */
+.flagActionsRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inspectDirectBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(229, 28, 35, 0.12);
+  border: 1px solid rgba(229, 28, 35, 0.35);
+  color: #ff5252;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.inspectDirectBtn:hover {
+  background: rgba(229, 28, 35, 0.24);
+  border-color: #ff5252;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.evidenceSnippetClickable {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(229, 28, 35, 0.4);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #f1f5f9;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.evidenceSnippetClickable:hover {
+  background: rgba(229, 28, 35, 0.08);
+  border-color: #ff5252;
+  border-style: solid;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(229, 28, 35, 0.2);
+}
+
+.evidenceHeaderHint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #ff5252;
+  margin-bottom: 6px;
+}
+
+.clearHighlightTopBtn {
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clearHighlightTopBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.posterViewportContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlayWrapper {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.overlaySvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pulsingBoundingRect {
+  fill: rgba(229, 28, 35, 0.12);
+  stroke: #e51c23;
+  stroke-width: 4;
+  filter: drop-shadow(0 0 10px rgba(229, 28, 35, 0.8));
+  animation: pulseBox 2s ease-in-out infinite;
+}
+
+@keyframes pulseBox {
+  0%, 100% {
+    stroke-opacity: 1;
+    fill-opacity: 0.15;
+    stroke-width: 4;
+  }
+  50% {
+    stroke-opacity: 0.6;
+    fill-opacity: 0.05;
+    stroke-width: 2.5;
+  }
+}
+
+.floatingHudCallout {
+  position: absolute;
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid #e51c23;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(229, 28, 35, 0.35);
+  border-radius: 10px;
+  padding: 10px 14px;
+  max-width: 280px;
+  z-index: 10;
+  animation: fadeInCallout 0.25s ease-out;
+}
+
+@keyframes fadeInCallout {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hudCalloutTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.hudBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #ff5252;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.hudDismissBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.hudDismissBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.hudDesc {
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  line-height: 1.4;
+  margin: 0 0 6px 0;
+}
+
+.hudEvidence {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: #ffcdd2;
+  background: rgba(229, 28, 35, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-left: 2px solid #e51c23;
+  margin-bottom: 6px;
+}
+
+.hudRegionTag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  display: block;
+}
+
+.videoViewportContainer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.videoHudOverlay {
+  position: absolute;
+  bottom: 50px;
+  left: 12px;
+  right: 12px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(229, 28, 35, 0.6);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(229, 28, 35, 0.3);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  z-index: 10;
+  pointer-events: auto;
+  animation: fadeInCallout 0.25s ease-out;
+}
+
+.videoHudLeft {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.videoHudAlertIcon {
+  color: #ff5252;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.videoHudTitle {
+  font-size: 0.8rem;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.videoHudSev {
+  color: #ff5252;
+  font-weight: 700;
+}
+
+.videoHudTime {
+  color: #38bdf8;
+  font-size: 0.74rem;
+}
+
+.videoHudText {
+  font-size: 0.76rem;
+  color: #cbd5e1;
+  margin: 4px 0 0 0;
+  line-height: 1.35;
+}
+
+.videoHudEvidence {
+  font-size: 0.72rem;
+  font-style: italic;
+  color: #fca5a5;
+  margin: 3px 0 0 0;
+}
+
+.videoHudCloseBtn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.videoHudCloseBtn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.quickJumpPillActive {
+  background: rgba(229, 28, 35, 0.3) !important;
+  border-color: #e51c23 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(229, 28, 35, 0.4);
+}

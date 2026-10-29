@@ -30,6 +30,7 @@ import {
   Eye,
   Sliders,
   ExternalLink,
+  X,
 } from 'lucide-react';
 import CinemaVideoWallBg from '@/components/CinemaVideoWallBg';
 import MagicBentoCard from '@/components/MagicBentoCard';
@@ -109,16 +110,36 @@ function normalizeReportData(report) {
           f.category.toLowerCase().replace(/[^a-z]/g, '') === catName.toLowerCase().replace(/[^a-z]/g, '')
       );
       if (match) {
+        const isDetected = Boolean(match.detected && match.severity !== 'None');
+        let box = match.boundingBox || null;
+        if (!box && (isDetected || isPoster)) {
+          const loc = ((match.timestamp || '') + ' ' + (match.evidence || '')).toLowerCase();
+          if (loc.includes('central') || loc.includes('center')) {
+            box = { ymin: 250, xmin: 250, ymax: 750, xmax: 750, regionLabel: 'Central Visual Focus' };
+          } else if (loc.includes('top')) {
+            box = { ymin: 60, xmin: 180, ymax: 420, xmax: 820, regionLabel: 'Top Visual Margin' };
+          } else if (loc.includes('bottom')) {
+            box = { ymin: 620, xmin: 150, ymax: 940, xmax: 850, regionLabel: 'Bottom Visual Ticker' };
+          } else if (loc.includes('left')) {
+            box = { ymin: 250, xmin: 60, ymax: 750, xmax: 480, regionLabel: 'Left Visual Frame' };
+          } else if (loc.includes('right')) {
+            box = { ymin: 250, xmin: 520, ymax: 750, xmax: 940, regionLabel: 'Right Visual Frame' };
+          } else if (isPoster) {
+            box = { ymin: 220, xmin: 200, ymax: 780, xmax: 800, regionLabel: 'Central Visual Focus' };
+          }
+        }
+
         return {
           category: catName,
-          detected: Boolean(match.detected && match.severity !== 'None'),
-          severity: match.detected ? match.severity || 'Moderate' : 'None',
-          explanation: match.explanation || (match.detected ? 'Identified during regulatory screening.' : 'No concerns detected.'),
+          detected: isDetected,
+          severity: isDetected ? match.severity || 'Moderate' : 'None',
+          explanation: match.explanation || (isDetected ? 'Identified during regulatory screening.' : 'No concerns detected.'),
           evidence: match.evidence || 'N/A',
-          timestamp: match.timestamp || (isPoster ? 'Key Visual Region' : '00:00'),
+          timestamp: match.timestamp || (isPoster ? 'Central Visual Focus' : '00:00'),
           confidence: typeof match.confidence === 'number' ? match.confidence : 92,
           context: match.context || 'Evaluated under OTT and CBFC statutory guidelines.',
-          uncertainForHumanReview: Boolean(match.uncertainForHumanReview || (match.detected && match.confidence < 75)),
+          uncertainForHumanReview: Boolean(match.uncertainForHumanReview || (isDetected && match.confidence < 75)),
+          boundingBox: box,
         };
       }
       return {
@@ -131,6 +152,7 @@ function normalizeReportData(report) {
         confidence: 95,
         context: 'Clean under regulatory guidelines.',
         uncertainForHumanReview: false,
+        boundingBox: null,
       };
     });
   } else {
@@ -208,12 +230,14 @@ export default function ReportPage() {
   const { id } = useParams();
   const router = useRouter();
   const videoRef = useRef(null);
+  const inspectorRef = useRef(null);
 
   const [rawReport, setRawReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expandedFlags, setExpandedFlags] = useState({});
   const [currentTime, setCurrentTime] = useState(0);
+  const [activeHighlight, setActiveHighlight] = useState(null);
 
   useEffect(() => {
     async function loadReport() {
@@ -254,6 +278,53 @@ export default function ReportPage() {
       const totalSec = minutes * 60 + seconds;
       videoRef.current.currentTime = totalSec;
       videoRef.current.play();
+    }
+  };
+
+  /**
+   * Smoothly navigates to the Media Inspector and highlights the exact flagged issue
+   * with coordinate-based bounding box overlay on posters or scene HUD for videos.
+   */
+  const handleInspectIssue = (flag) => {
+    if (!flag) return;
+
+    let box = flag.boundingBox;
+    const locText = ((flag.timestamp || '') + ' ' + (flag.evidence || '')).toLowerCase();
+
+    if (!box) {
+      if (locText.includes('central') || locText.includes('center')) {
+        box = { ymin: 250, xmin: 250, ymax: 750, xmax: 750, regionLabel: 'Central Visual Focus' };
+      } else if (locText.includes('top')) {
+        box = { ymin: 60, xmin: 180, ymax: 420, xmax: 820, regionLabel: 'Top Visual Margin' };
+      } else if (locText.includes('bottom')) {
+        box = { ymin: 620, xmin: 150, ymax: 940, xmax: 850, regionLabel: 'Bottom Visual Ticker' };
+      } else if (locText.includes('left')) {
+        box = { ymin: 250, xmin: 60, ymax: 750, xmax: 480, regionLabel: 'Left Visual Frame' };
+      } else if (locText.includes('right')) {
+        box = { ymin: 250, xmin: 520, ymax: 750, xmax: 940, regionLabel: 'Right Visual Frame' };
+      } else {
+        box = { ymin: 220, xmin: 200, ymax: 780, xmax: 800, regionLabel: flag.timestamp || 'Central Visual Focus' };
+      }
+    }
+
+    setActiveHighlight({
+      category: flag.category,
+      severity: flag.severity,
+      explanation: flag.explanation,
+      evidence: flag.evidence,
+      timestamp: flag.timestamp,
+      regionLabel: box?.regionLabel || flag.timestamp || 'Central Visual Focus',
+      box: box || { ymin: 250, xmin: 250, ymax: 750, xmax: 750, regionLabel: 'Central Visual Focus' },
+    });
+
+    // If timestamp has minutes/seconds, seek the video
+    if (flag.timestamp && flag.timestamp.includes(':')) {
+      handleSeek(flag.timestamp);
+    }
+
+    // Smoothly scroll directly to the Media Inspector
+    if (inspectorRef.current) {
+      inspectorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
@@ -781,16 +852,30 @@ export default function ReportPage() {
                             </div>
                           </div>
 
-                          <button
-                            type="button"
-                            className={styles.expandToggleBtn}
-                            aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
-                          >
-                            <span className={styles.expandBtnText}>
-                              {isExpanded ? 'Hide Evidence' : 'View Evidence & Context'}
-                            </span>
-                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                          </button>
+                          <div className={styles.flagActionsRight}>
+                            <button
+                              type="button"
+                              className={styles.inspectDirectBtn}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleInspectIssue(flag);
+                              }}
+                              title="Pinpoint this issue on media / poster viewer"
+                            >
+                              <Crosshair size={13} />
+                              <span>Pinpoint Issue</span>
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.expandToggleBtn}
+                              aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
+                            >
+                              <span className={styles.expandBtnText}>
+                                {isExpanded ? 'Hide Evidence' : 'View Evidence & Context'}
+                              </span>
+                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            </button>
+                          </div>
                         </div>
 
                         {/* Expandable Details: Timestamps, Evidence Quote, Confidence, Context */}
@@ -799,8 +884,16 @@ export default function ReportPage() {
                             <div className={styles.detailsGrid}>
                               {/* Evidence from Media */}
                               <div className={styles.detailCell}>
-                                <span className={styles.cellLabel}>Evidence from Media</span>
-                                <div className={styles.evidenceSnippet}>
+                                <span className={styles.cellLabel}>Evidence from Media (Click to pinpoint)</span>
+                                <div
+                                  className={styles.evidenceSnippetClickable}
+                                  onClick={() => handleInspectIssue(flag)}
+                                  title="Click to pinpoint evidence on media / poster viewer"
+                                >
+                                  <div className={styles.evidenceHeaderHint}>
+                                    <Crosshair size={12} />
+                                    <span>Click to pinpoint in Media Viewer</span>
+                                  </div>
                                   &ldquo;{flag.evidence}&rdquo;
                                 </div>
                               </div>
@@ -811,11 +904,11 @@ export default function ReportPage() {
                                 <div className={styles.timestampBadgeRow}>
                                   <span
                                     className={styles.timestampClickablePill}
-                                    onClick={() => handleSeek(flag.timestamp)}
-                                    title="Click to jump to time in media player"
+                                    onClick={() => handleInspectIssue(flag)}
+                                    title="Click to locate on poster or seek in video"
                                   >
-                                    <Clock size={13} />
-                                    <span>{flag.timestamp || 'Visual Region'}</span>
+                                    <Crosshair size={13} />
+                                    <span>{flag.timestamp || 'Central Visual Focus'}</span>
                                   </span>
                                   <span className={styles.confidenceScorePill}>
                                     Confidence: {flag.confidence}%
@@ -937,28 +1030,138 @@ export default function ReportPage() {
 
           {/* Side Column: Media Inspector & Asset Diagnostics */}
           <div className={styles.sideColumn}>
-            <div className={styles.inspectorCard}>
+            <div className={styles.inspectorCard} ref={inspectorRef}>
               <div className={styles.inspectorHeader}>
                 <Film size={15} />
                 <span>Media Inspector ({report.aspectRatio})</span>
+                {activeHighlight && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveHighlight(null)}
+                    className={styles.clearHighlightTopBtn}
+                    title="Clear Active Highlight"
+                  >
+                    Clear Focus
+                  </button>
+                )}
               </div>
 
               {/* Viewport */}
               <div className={`${styles.viewport} ${isVertical ? styles.viewportVertical : styles.viewportWidescreen}`}>
                 {isPoster || report.mediaUrl?.match(/\.(jpeg|jpg|png|webp)/i) ? (
-                  <img src={report.mediaUrl} alt={report.title} className={styles.mediaPosterImg} />
+                  <div className={styles.posterViewportContainer}>
+                    <img src={report.mediaUrl} alt={report.title} className={styles.mediaPosterImg} />
+                    {activeHighlight && (
+                      <div className={styles.overlayWrapper}>
+                        <svg
+                          className={styles.overlaySvg}
+                          viewBox="0 0 1000 1000"
+                          preserveAspectRatio="none"
+                        >
+                          <defs>
+                            <mask id="highlightHole">
+                              <rect x="0" y="0" width="1000" height="1000" fill="white" />
+                              <rect
+                                x={activeHighlight.box.xmin}
+                                y={activeHighlight.box.ymin}
+                                width={Math.max(60, activeHighlight.box.xmax - activeHighlight.box.xmin)}
+                                height={Math.max(60, activeHighlight.box.ymax - activeHighlight.box.ymin)}
+                                fill="black"
+                                rx="12"
+                              />
+                            </mask>
+                          </defs>
+                          {/* Dimmed surround */}
+                          <rect x="0" y="0" width="1000" height="1000" fill="rgba(0, 0, 0, 0.45)" mask="url(#highlightHole)" />
+                          {/* Animated glowing bounding box */}
+                          <rect
+                            x={activeHighlight.box.xmin}
+                            y={activeHighlight.box.ymin}
+                            width={Math.max(60, activeHighlight.box.xmax - activeHighlight.box.xmin)}
+                            height={Math.max(60, activeHighlight.box.ymax - activeHighlight.box.ymin)}
+                            className={styles.pulsingBoundingRect}
+                            rx="12"
+                          />
+                          {/* Reticle Target Crosshairs */}
+                          <circle
+                            cx={(activeHighlight.box.xmin + activeHighlight.box.xmax) / 2}
+                            cy={(activeHighlight.box.ymin + activeHighlight.box.ymax) / 2}
+                            r="16"
+                            fill="none"
+                            stroke="#e51c23"
+                            strokeWidth="2.5"
+                            strokeDasharray="4 3"
+                          />
+                        </svg>
+                        {/* Floating Regulatory HUD Callout Badge */}
+                        <div
+                          className={styles.floatingHudCallout}
+                          style={{
+                            top: `${Math.min(72, Math.max(6, (activeHighlight.box.ymin / 10) - 2))}%`,
+                            left: `${Math.min(60, Math.max(4, activeHighlight.box.xmin / 10))}%`,
+                          }}
+                        >
+                          <div className={styles.hudCalloutTop}>
+                            <span className={styles.hudBadge}>
+                              <Crosshair size={11} /> {activeHighlight.category} ({activeHighlight.severity})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setActiveHighlight(null)}
+                              className={styles.hudDismissBtn}
+                              title="Clear highlight"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                          <p className={styles.hudDesc}>{activeHighlight.explanation}</p>
+                          {activeHighlight.evidence && activeHighlight.evidence !== 'N/A' && (
+                            <div className={styles.hudEvidence}>&ldquo;{activeHighlight.evidence}&rdquo;</div>
+                          )}
+                          <span className={styles.hudRegionTag}>📍 {activeHighlight.regionLabel}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 ) : isSong ? (
                   <div className={styles.songInspectorWrapper}>
                     <Music size={52} className={styles.songIcon} />
                     <audio ref={videoRef} src={report.mediaUrl} controls className={styles.audioElem} />
                   </div>
                 ) : (
-                  <video
-                    ref={videoRef}
-                    src={report.mediaUrl}
-                    controls
-                    className={styles.videoElem}
-                  />
+                  <div className={styles.videoViewportContainer}>
+                    <video
+                      ref={videoRef}
+                      src={report.mediaUrl}
+                      controls
+                      className={styles.videoElem}
+                    />
+                    {activeHighlight && (
+                      <div className={styles.videoHudOverlay}>
+                        <div className={styles.videoHudLeft}>
+                          <AlertTriangle size={16} className={styles.videoHudAlertIcon} />
+                          <div>
+                            <div className={styles.videoHudTitle}>
+                              <strong>{activeHighlight.category}</strong> • <span className={styles.videoHudSev}>{activeHighlight.severity}</span>
+                              {activeHighlight.timestamp && <span className={styles.videoHudTime}>({activeHighlight.timestamp})</span>}
+                            </div>
+                            <p className={styles.videoHudText}>{activeHighlight.explanation}</p>
+                            {activeHighlight.evidence && activeHighlight.evidence !== 'N/A' && (
+                              <p className={styles.videoHudEvidence}>&ldquo;{activeHighlight.evidence}&rdquo;</p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setActiveHighlight(null)}
+                          className={styles.videoHudCloseBtn}
+                          title="Close alert"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -989,19 +1192,20 @@ export default function ReportPage() {
               </div>
 
               {/* Quick Jump Markers for Video Flags */}
-              {detectedFlags.some((f) => f.timestamp && f.timestamp.includes(':')) && (
+              {detectedFlags.length > 0 && (
                 <div className={styles.quickJumpContainer}>
-                  <span className={styles.quickJumpHeader}>Jump to Flagged Timestamps:</span>
+                  <span className={styles.quickJumpHeader}>Interactive Media Issue Navigator:</span>
                   <div className={styles.quickJumpPills}>
                     {detectedFlags.map((f, i) => (
                       <button
                         key={i}
                         type="button"
-                        onClick={() => handleSeek(f.timestamp)}
-                        className={styles.quickJumpPill}
+                        onClick={() => handleInspectIssue(f)}
+                        className={`${styles.quickJumpPill} ${activeHighlight?.category === f.category ? styles.quickJumpPillActive : ''}`}
+                        title={`Pinpoint ${f.category} in viewer`}
                       >
-                        <Clock size={11} />
-                        <span>{f.timestamp} ({f.category})</span>
+                        <Crosshair size={11} />
+                        <span>{f.timestamp || 'Focus'} ({f.category})</span>
                       </button>
                     ))}
                   </div>
